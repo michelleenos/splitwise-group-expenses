@@ -3,10 +3,6 @@
 		<q-page-container>
 			<q-header bordered class="bg-primary" height-hint="98">
 				<q-toolbar>
-					<!---
-                
-					<q-btn dense flat round icon="menu" @click="toggleLeftDrawer" />
-                    ----->
 					<q-toolbar-title v-if="currentGroupId && currentGroupData">{{
 						currentGroupData.name
 					}}</q-toolbar-title>
@@ -27,15 +23,11 @@
 				</q-tabs>
 			</q-header>
 
-			<!---
-             <q-drawer show-if-above v-model="leftDrawerOpen" side="left" bordered> </q-drawer> 
-            ----->
-
 			<q-page>
 				<q-tab-panels v-model="tab" animated>
 					<q-tab-panel name="recent">
 						<div
-							class="q-pa-lg"
+							class="q-pa-md full-width row wrap justify-center items-start"
 							v-if="currentGroupData && recentGroupExpenses.length > 0"
 						>
 							<q-table
@@ -47,90 +39,53 @@
 								:columns="columns"
 								color="secondary"
 								row-key="id"
+								class="col-12 col-md-8"
 							/>
 						</div>
 					</q-tab-panel>
 					<q-tab-panel name="form">
-						<div class="q-pa-md" v-if="currentGroupData">
-							<q-form
-								@submit="submitExpense"
-								class="q-gutter-md"
-								style="max-width: 500px"
-							>
-								<q-input v-model="inputName" label="Expense Title" outlined />
-								<q-input
-									outlined
-									v-model="inputDate"
-									mask="date"
-									:rules="[
-										(v) =>
-											/^-?[\d]+\/[0-1]\d\/[0-3]\d$/.test(v) || 'invalid date',
-									]"
-									label="Date"
-									hide-bottom-space
-								>
-									<template v-slot:prepend>
-										<q-icon name="event" class="cursor-pointer">
-											<q-popup-proxy
-												cover
-												transition-show="scale"
-												transition-hide="scale"
-											>
-												<q-date v-model="inputDate">
-													<div class="row items-center justify-end">
-														<q-btn
-															v-close-popup
-															label="Close"
-															color="primary"
-															flat
-														/>
-													</div>
-												</q-date>
-											</q-popup-proxy>
-										</q-icon>
-									</template>
-								</q-input>
-								<q-input label="Cost" v-model="inputCost" type="number" outlined>
-									<template v-slot:prepend>
-										<q-icon name="sell"></q-icon>
-									</template>
-								</q-input>
-
-								<div class="splits">
-									<div class="row no-wrap q-gutter-sm">
-										<div v-for="(member, i) in members" :key="i">
-											<q-input
-												outlined
-												type="number"
-												:label="member.first_name"
-												v-model="member.currentSplit"
-											/>
-										</div>
-									</div>
-								</div>
-
-								<q-btn label="Submit" type="submit" color="primary" />
-							</q-form>
+						<div
+							class="q-pa-md full-width row wrap justify-center items-start"
+							v-if="currentGroupData"
+						>
+							<NewExpenseForm
+								:members="members"
+								:splitwise="splitwise"
+								:user="user"
+								:userInfo="userInfo"
+								:currentGroupId="currentGroupId"
+								@submission="getExpenses"
+							/>
 						</div>
 					</q-tab-panel>
 					<q-tab-panel name="groups">
-						<div class="q-pa-md" v-if="groups.length > 0">
-							<h2 class="text-subtitle1 text-uppercase text-bold">Choose A Group</h2>
-							<q-list bordered separator>
-								<q-item
-									clickable
-									v-for="(group, i) in groups"
-									:key="i"
-									@click="getGroup(group.id)"
-								>
-									<q-item-section>
-										<q-item-label>
-											{{ group.name }}
-										</q-item-label>
-									</q-item-section>
-								</q-item>
-							</q-list>
+						<div
+							class="q-pa-md full-width row wrap justify-center items-start"
+							v-if="groups.length > 0"
+						>
+							<div class="col-12 col-md-8 col-lg-6">
+								<h2 class="text-subtitle1 text-uppercase text-bold">
+									Choose A Group
+								</h2>
+								<q-list bordered separator>
+									<q-item
+										clickable
+										v-for="(group, i) in groups"
+										:key="i"
+										@click="getGroup(group.id)"
+									>
+										<q-item-section>
+											<q-item-label>
+												{{ group.name }}
+											</q-item-label>
+										</q-item-section>
+									</q-item>
+								</q-list>
+							</div>
 						</div>
+					</q-tab-panel>
+					<q-tab-panel name="login" v-if="!isLoggedIn()">
+						<div class="q-pa-lg text-center">please log in using the toolbar above</div>
 					</q-tab-panel>
 				</q-tab-panels>
 			</q-page>
@@ -143,11 +98,12 @@ import { ref } from 'vue'
 import Pizzly from 'pizzly-js'
 const pizzly = new Pizzly({
 	host: 'https://splitwise-grocery-tracker.herokuapp.com',
+	publishableKey: 'BVRchYHCWpZmxWzwALyluch',
 })
 const splitwise = pizzly.integration('splitwise')
-console.log(splitwise)
 
 import { defineComponent } from 'vue'
+import NewExpenseForm from 'src/components/NewExpenseForm.vue'
 
 export default defineComponent({
 	name: 'IndexPage',
@@ -165,7 +121,9 @@ export default defineComponent({
 			inputCost: null,
 			inputDate: null,
 			inputName: null,
-			tab: 'recent',
+			tab: 'login',
+			splitTotal: 0,
+			splitwise: splitwise,
 			columns: [
 				{
 					name: 'description',
@@ -187,7 +145,6 @@ export default defineComponent({
 	},
 	setup() {
 		const leftDrawerOpen = ref(false)
-
 		return {
 			leftDrawerOpen,
 			toggleLeftDrawer() {
@@ -203,8 +160,6 @@ export default defineComponent({
 			if (localStorage.getItem('splitwise_currentgroupid')) {
 				this.currentGroupId = localStorage.getItem('splitwise_currentgroupid')
 				this.getGroup(this.currentGroupId)
-			} else {
-				this.tab = 'groups'
 			}
 		}
 	},
@@ -227,35 +182,55 @@ export default defineComponent({
 			this.members = []
 			localStorage.removeItem('splitwise_user')
 			localStorage.removeItem('splitwise_currentgroupid')
+			this.panel = 'login'
 		},
 		connectSuccess: function (data) {
-			console.log(data)
 			this.user = data.authId
 			localStorage.setItem('splitwise_user', data.authId)
 			this.getCurrentUser()
 			this.getGroups()
 		},
 		getCurrentUser: function () {
+			if (!this.user) {
+				return this.sendError('missing user auth')
+			}
 			splitwise
 				.auth(this.user)
 				.get('/get_current_user')
 				.then((response) => response.json())
 				.then((data) => {
-					this.userInfo = data.user
+					if (data.error) {
+						throw data.error
+					} else {
+						this.userInfo = data.user
+					}
 				})
-				.catch(console.error)
+				.catch((err) => {
+					console.error(err)
+					this.user = null
+				})
+		},
+		sendError: function (msg) {
+			console.error(msg)
+			return
 		},
 		getGroups: function () {
+			if (!this.user) {
+				return this.sendError('missing user auth')
+			}
 			splitwise
 				.auth(this.user)
 				.get('/get_groups')
 				.then((response) => response.json())
 				.then((data) => {
+					if (data.error) throw data.error
 					this.groups = data.groups
-
 					this.tab = 'groups'
 				})
-				.catch(console.error)
+				.catch((err) => {
+					console.error(err)
+					this.user = null
+				})
 		},
 		getGroup(id) {
 			splitwise
@@ -263,10 +238,9 @@ export default defineComponent({
 				.get('/get_group/' + id)
 				.then((response) => response.json())
 				.then((data) => {
+					if (data.error) throw data.error
 					this.currentGroupId = id
 					this.currentGroupData = data.group
-					console.log(this.currentGroupData)
-
 					this.currentGroupData.members.forEach((member, i) => {
 						this.members[i] = JSON.parse(JSON.stringify(member))
 						this.members[i].currentSplit = 0
@@ -294,73 +268,17 @@ export default defineComponent({
 				.get('/get_expenses?group_id=' + this.currentGroupId)
 				.then((response) => response.json())
 				.then((data) => {
+					if (data.error) throw Error(data.error.message ?? 'unknown error')
 					this.recentGroupExpenses = data.expenses.filter(
 						(expense) => expense.deleted_at === null
 					)
 				})
-		},
-		submitExpenseTest() {
-			console.log(this.inputCost)
-			console.log(this.inputDate)
-			console.log(this.inputName)
-		},
-		submitExpense: function () {
-			if (!this.inputCost || !this.inputName) {
-				// this.formError = 'whoops, missing information'
-				return
-			}
-
-			let expenseData = {
-				cost: this.inputCost,
-				description: this.inputName,
-				group_id: this.currentGroupId,
-				date: this.inputDate,
-				users__0__user_id: this.userInfo.id,
-				users__0__paid_share: this.inputCost.toString(),
-			}
-
-			let currentUserShare = this.inputCost
-
-			for (let i = 0; i < this.members.length; i++) {
-				let currentMember = this.members[i]
-				if (currentMember.id == this.userInfo.id) {
-					currentUserShare = this.inputCost * (currentMember.currentSplit / 100)
-				}
-
-				let userShare = this.inputCost * (currentMember.currentSplit / 100)
-
-				expenseData['users__' + i + '__user_id'] = currentMember.id
-				expenseData['users__' + i + '__owed_share'] = userShare.toString()
-			}
-
-			expenseData['users__0__owed_share'] = currentUserShare.toString()
-
-			splitwise
-				.auth(this.user)
-				.post('/create_expense', {
-					body: JSON.stringify(expenseData),
-					headers: {
-						'Content-Type': 'application/json',
-					},
-				})
-				.then((response) => response.json())
-				.then((data) => {
-					console.log(data)
-					this.inputName = ''
-					this.inputCost = null
-					this.getExpenses()
-
-					if (data.errors && Object.keys(data.errors).length > 0) {
-						this.formError = data.errors.base[0]
-					} else {
-						this.formError = false
-					}
-				})
-				.catch((error) => console.error(error))
+				.catch(console.error)
 		},
 		connectError: function (err) {
-			console.error(err)
+			console.log(err)
 		},
 	},
+	components: { NewExpenseForm },
 })
 </script>
