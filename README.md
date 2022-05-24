@@ -1,41 +1,10 @@
-# Splitwise App (splitwise-new-2)
+# splitwise-group-expenses
 
-A Quasar Project
+My partners and I use [splitwise](https://www.splitwise.com/) to manage our household expenses, but a few things like groceries we split un-evenly. I was tired of always having to re-type the perentages into the Splitwise form, which is a bit clunky and unwieldy. So I made a little app to make it easier! 
 
-## Install the dependencies
-```bash
-yarn
-# or
-npm install
-```
+## this project is built with: 
 
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
-```bash
-quasar dev
-```
+- [Pizzly](https://github.com/Bearer/Pizzly) for oauth
+- Vue3
+- [Quasar UI building blocks](https://quasar.dev/)
 
-
-### Lint the files
-```bash
-yarn lint
-# or
-npm run lint
-```
-
-
-### Format the files
-```bash
-yarn format
-# or
-npm run format
-```
-
-
-
-### Build the app for production
-```bash
-quasar build
-```
-
-### Customize the configuration
-See [Configuring quasar.config.js](https://v2.quasar.dev/quasar-cli-vite/quasar-config-js).
