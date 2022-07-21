@@ -4,5 +4,8 @@
 	"editor.formatOnSave": true,
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 
-	"eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"]
+	"eslint.validate": ["javascript", "javascriptreact", "typescript", "vue"],
+	"prettier.singleQuote": true,
+	"prettier.tabWidth": 3,
+	"editor.tabSize": 3
 }

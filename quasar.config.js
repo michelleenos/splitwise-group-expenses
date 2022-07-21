@@ -49,11 +49,17 @@ module.exports = configure(function (/* ctx */) {
 		// Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#build
 		build: {
 			target: {
-				browser: ['es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1'],
+				browser: [
+					'es2019',
+					'edge88',
+					'firefox78',
+					'chrome87',
+					'safari13.1',
+				],
 				node: 'node16',
 			},
 
-			vueRouterMode: 'hash', // available values: 'hash', 'history'
+			vueRouterMode: 'history', // available values: 'hash', 'history'
 			// vueRouterBase,
 			// vueDevtools,
 			// vueOptionsAPI: false,
@@ -87,7 +93,7 @@ module.exports = configure(function (/* ctx */) {
 		framework: {
 			config: {
 				brand: {
-					primary: '#1a237e',
+					// primary: '#1a237e',
 					secondary: '#ff5722',
 					info: '#4dd0e1',
 				},

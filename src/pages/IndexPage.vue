@@ -9,8 +9,12 @@
 					<q-toolbar-title v-else> Splitwise </q-toolbar-title>
 
 					<div v-if="isLoggedIn()" class="text-subtitle1">
-						<span>{{ userInfo.first_name }} {{ userInfo.last_name }}</span>
-						<q-btn outline class="q-ml-sm" @click="logoutUser">Log Out</q-btn>
+						<span
+							>{{ userInfo.first_name }} {{ userInfo.last_name }}</span
+						>
+						<q-btn outline class="q-ml-sm" @click="logoutUser"
+							>Log Out</q-btn
+						>
 					</div>
 					<div v-else>
 						<q-btn outline label="Log In" @click="connect" />
@@ -85,7 +89,9 @@
 						</div>
 					</q-tab-panel>
 					<q-tab-panel name="login" v-if="!isLoggedIn()">
-						<div class="q-pa-lg text-center">please log in using the toolbar above</div>
+						<div class="q-pa-lg text-center">
+							please log in using the toolbar above
+						</div>
 					</q-tab-panel>
 				</q-tab-panels>
 			</q-page>
@@ -139,7 +145,12 @@ export default defineComponent({
 					field: 'date',
 					format: (val) => new Date(val).toLocaleDateString('en-US'),
 				},
-				{ name: 'cost', label: 'Cost', field: 'cost', format: (val) => `$${val}` },
+				{
+					name: 'cost',
+					label: 'Cost',
+					field: 'cost',
+					format: (val) => `$${val}`,
+				},
 			],
 		}
 	},
@@ -158,7 +169,9 @@ export default defineComponent({
 			this.getCurrentUser()
 			this.getGroups()
 			if (localStorage.getItem('splitwise_currentgroupid')) {
-				this.currentGroupId = localStorage.getItem('splitwise_currentgroupid')
+				this.currentGroupId = localStorage.getItem(
+					'splitwise_currentgroupid'
+				)
 				this.getGroup(this.currentGroupId)
 			}
 		}
@@ -257,7 +270,8 @@ export default defineComponent({
 							this.members[i].currentSplit = 0
 						}
 					})
-					localStorage.setItem('splitwise_currentgroupid', this.currentGroupId)
+					// localStorage.setItem('splitwise_groupId', this.currentGroupId)
+
 					this.getExpenses()
 				})
 				.catch(console.error)
@@ -268,7 +282,8 @@ export default defineComponent({
 				.get('/get_expenses?group_id=' + this.currentGroupId)
 				.then((response) => response.json())
 				.then((data) => {
-					if (data.error) throw Error(data.error.message ?? 'unknown error')
+					if (data.error)
+						throw Error(data.error.message ?? 'unknown error')
 					this.recentGroupExpenses = data.expenses.filter(
 						(expense) => expense.deleted_at === null
 					)
