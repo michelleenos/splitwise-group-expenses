@@ -49,7 +49,7 @@ function setCurrentGroup(i) {
 			</q-header>
 			<q-drawer
 				side="left"
-				breakpoint="900"
+				:breakpoint="900"
 				bordered
 				persistent
 				v-model="drawerLeft"

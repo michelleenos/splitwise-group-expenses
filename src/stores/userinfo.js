@@ -73,6 +73,7 @@ export const useInfoStore = defineStore('info', {
 			if (!this.userId) {
 				throw 'you need to log in first'
 			} else if (!this.groupId) {
+				this.expenses = []
 				throw 'select a group first'
 			}
 
