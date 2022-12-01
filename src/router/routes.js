@@ -16,6 +16,10 @@ const routes = [
 				path: '/group',
 				component: () => import('pages/GroupView.vue'),
 			},
+			{
+				path: '/user-expenses',
+				component: () => import('pages/UserExpenses.vue'),
+			},
 		],
 	},
 

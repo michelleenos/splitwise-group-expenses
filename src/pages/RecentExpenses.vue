@@ -27,6 +27,12 @@ const columns = [
 		field: 'cost',
 		format: (val) => `$${val}`,
 	},
+	{
+		name: 'createdby',
+		label: 'Created By',
+		field: 'created_by',
+		format: (val) => val.first_name,
+	},
 ]
 
 if (groupId.value !== -1) {
@@ -53,7 +59,6 @@ watch(groupId, (newVal, oldVal) => {
 			:columns="columns"
 			color="orange"
 			row-key="id"
-			class="col-11 col-md-8"
-		/>
+			class="col-11 col-md-8" />
 	</div>
 </template>

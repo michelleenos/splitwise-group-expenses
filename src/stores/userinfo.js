@@ -21,6 +21,7 @@ export const useInfoStore = defineStore('info', {
 			groupId: localGroupId ?? -1,
 			currentGroup: localGroupData ?? false,
 			expenses: [],
+			userExpenses: [],
 			groups: localGroups ?? null,
 		}
 	},
@@ -69,6 +70,23 @@ export const useInfoStore = defineStore('info', {
 			this.userData = userData
 			this.getGroups()
 		},
+		async getUserExpenses() {
+			const filterExpenses = () => {
+				console.log(this.userData.id)
+				this.userExpenses = this.expenses.filter((expense) => {
+					return expense.created_by.id == this.userData.id
+					// console.log(expense.created_by.id, this.userId)
+				})
+				console.log(this.userExpenses)
+			}
+
+			if (!this.expenses || this.expenses.length === 0) {
+				await this.getExpenses().then(filterExpenses)
+				console.log('hi', this.expenses)
+			} else {
+				filterExpenses()
+			}
+		},
 		async getExpenses() {
 			if (!this.userId) {
 				throw 'you need to log in first'
@@ -76,10 +94,16 @@ export const useInfoStore = defineStore('info', {
 				this.expenses = []
 				throw 'select a group first'
 			}
+			let d = new Date()
+			d.setMonth(d.getMonth() - 2)
 
 			let expenses = await splitwise
 				.auth(this.userId)
-				.get('/get_expenses?group_id=' + this.groupId)
+				.get(
+					`/get_expenses?group_id=${
+						this.groupId
+					}&limit=150&updated_after=${d.toISOString()}`
+				)
 				.then((response) => response.json())
 				.then((data) => {
 					if (data.error)
@@ -152,24 +176,29 @@ export const useInfoStore = defineStore('info', {
 			this.groupData = groupData
 			this.members = members
 		},
-		async submitExpense(inputCost, inputName, inputDate) {
+		async submitExpense(inputCost, inputName, inputDate, even) {
 			let expenseData = {
 				cost: inputCost,
 				description: inputName,
 				date: inputDate,
 				group_id: this.currentGroup.id,
-				users__0__paid_share: inputCost.toString(),
+				split_equally: even ? 'true' : 'false',
 			}
 
-			for (let i = 0; i < this.currentGroup.members.length; i++) {
-				let currentMember = this.currentGroup.members[i]
-				if (currentMember.id === this.userId) {
-					currentUserShare = inputCost * (currentMember.currentSplit / 100)
-				}
-				let userShare = inputCost * (currentMember.currentSplit / 100)
+			if (!even) {
+				expenseData['users__0__paid_share'] = inputCost.toString()
+				for (let i = 0; i < this.currentGroup.members.length; i++) {
+					let currentMember = this.currentGroup.members[i]
+					if (currentMember.id === this.userId) {
+						currentUserShare =
+							inputCost * (currentMember.currentSplit / 100)
+					}
+					let userShare = inputCost * (currentMember.currentSplit / 100)
 
-				expenseData['users__' + i + '__user_id'] = currentMember.id
-				expenseData['users__' + i + '__owed_share'] = userShare.toString()
+					expenseData['users__' + i + '__user_id'] = currentMember.id
+					expenseData['users__' + i + '__owed_share'] =
+						userShare.toString()
+				}
 			}
 
 			await splitwise
@@ -189,7 +218,10 @@ export const useInfoStore = defineStore('info', {
 						return data
 					}
 				})
-				.catch(console.error)
+				.catch((err) => {
+					console.error(err)
+					throw err
+				})
 		},
 	},
 })

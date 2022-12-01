@@ -49,17 +49,15 @@ function setCurrentGroup(i) {
 			</q-header>
 			<q-drawer
 				side="left"
-				:breakpoint="900"
+				:breakpoint="768"
 				bordered
 				persistent
 				v-model="drawerLeft"
-				class="bg-grey-3"
-			>
+				class="bg-grey-3">
 				<q-list>
 					<q-item
 						v-if="currentGroup"
-						style="margin-top: 20px; margin-bottom: 10px"
-					>
+						style="margin-top: 20px; margin-bottom: 10px">
 						<q-item-section>
 							<q-item-label overline>Current Group</q-item-label>
 							<q-item-label>{{ currentGroup.name }}</q-item-label>
@@ -76,18 +74,26 @@ function setCurrentGroup(i) {
 					<q-item
 						clickable
 						to="/recent-expenses"
-						:disable="currentGroup ? null : true"
-					>
+						:disable="currentGroup ? null : true">
 						<q-item-section avatar>
 							<q-icon name="timeline" color="green" />
 						</q-item-section>
 						<q-item-section>Recent Group Expenses</q-item-section>
 					</q-item>
+
+					<q-item
+						clickable
+						to="/user-expenses"
+						:disable="currentGroup ? null : true">
+						<q-item-section avatar>
+							<q-icon name="timeline" color="green" />
+						</q-item-section>
+						<q-item-section>User Expenses in Group</q-item-section>
+					</q-item>
 					<q-item
 						clickable
 						to="/new-expense"
-						:disable="currentGroup ? null : true"
-					>
+						:disable="currentGroup ? null : true">
 						<q-item-section avatar>
 							<q-icon name="paid" color="green" />
 						</q-item-section>
@@ -100,8 +106,7 @@ function setCurrentGroup(i) {
 						icon="group"
 						expand-icon-class="text-green"
 						label="Groups"
-						:disable="groups ? null : true"
-					>
+						:disable="groups ? null : true">
 						<template #header>
 							<q-item-section avatar>
 								<q-icon name="group" color="green" />
@@ -114,8 +119,7 @@ function setCurrentGroup(i) {
 								v-for="(group, i) in groups"
 								:key="`group-${i}`"
 								@click="() => setCurrentGroup(i)"
-								:active="currentGroup.id === group.id"
-							>
+								:active="currentGroup.id === group.id">
 								<q-item-section>{{ group.name }}</q-item-section>
 							</q-item>
 						</q-list>

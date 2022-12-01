@@ -1,5 +1,9 @@
 <template>
-	<q-form @submit="submitExpense" class="q-gutter-md col-12 col-md-6" ref="form" @reset="onReset">
+	<q-form
+		@submit="submitExpense"
+		class="q-gutter-md col-12 col-md-6"
+		ref="form"
+		@reset="onReset">
 		<q-input
 			v-model="inputName"
 			label="Expense Title"
@@ -7,23 +11,30 @@
 			required
 			:rules="[(v) => !!v || 'This field is required']"
 			lazy-rules="ondemand"
-			hide-bottom-space
-		/>
+			hide-bottom-space />
 		<q-input
 			outlined
 			v-model="inputDate"
 			mask="date"
-			:rules="[(v) => /^-?[\d]+\/[0-1]\d\/[0-3]\d$/.test(v) || 'Invalid date']"
+			:rules="[
+				(v) => /^-?[\d]+\/[0-1]\d\/[0-3]\d$/.test(v) || 'Invalid date',
+			]"
 			lazy-rules="ondemand"
 			label="Date"
-			hide-bottom-space
-		>
+			hide-bottom-space>
 			<template v-slot:prepend>
 				<q-icon name="event" class="cursor-pointer">
-					<q-popup-proxy cover transition-show="scale" transition-hide="scale">
+					<q-popup-proxy
+						cover
+						transition-show="scale"
+						transition-hide="scale">
 						<q-date v-model="inputDate">
 							<div class="row items-center justify-end">
-								<q-btn v-close-popup label="Close" color="primary" flat />
+								<q-btn
+									v-close-popup
+									label="Close"
+									color="primary"
+									flat />
 							</div>
 						</q-date>
 					</q-popup-proxy>
@@ -40,8 +51,7 @@
 			hide-bottom-space
 			lazy-rules="ondemand"
 			prefix="$"
-			:rules="[(v) => v > 0 || 'Invalid cost']"
-		>
+			:rules="[(v) => v > 0 || 'Invalid cost']">
 			<template v-slot:prepend>
 				<q-icon name="sell"></q-icon>
 			</template>
@@ -58,8 +68,7 @@
 						type="number"
 						:label="member.first_name"
 						v-model="member.currentSplit"
-						@update:model-value="updateSplit"
-					/>
+						@update:model-value="updateSplit" />
 				</div>
 				<q-input
 					filled
@@ -68,8 +77,11 @@
 					v-model="splitTotal"
 					readonly
 					:rules="[(v) => v == 100 || 'Split must add up to 100']"
-					lazy-rules="ondemand"
-				/>
+					lazy-rules="ondemand" />
+				<div>
+					set predefined split:
+					<q-btn color="primary" label="groceries" />
+				</div>
 			</div>
 		</div>
 
@@ -127,7 +139,8 @@ export default {
 			for (let i = 0; i < this.members.length; i++) {
 				let currentMember = this.members[i]
 				if (currentMember.id == this.userInfo.id) {
-					currentUserShare = this.inputCost * (currentMember.currentSplit / 100)
+					currentUserShare =
+						this.inputCost * (currentMember.currentSplit / 100)
 				}
 				let userShare = this.inputCost * (currentMember.currentSplit / 100)
 				expenseData['users__' + i + '__user_id'] = currentMember.id
