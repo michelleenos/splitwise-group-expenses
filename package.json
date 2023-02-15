@@ -13,7 +13,9 @@
 		"build": "quasar build"
 	},
 	"dependencies": {
+		"@nangohq/frontend": "^0.8.0",
 		"@quasar/extras": "^1.0.0",
+		"dotenv": "^16.0.3",
 		"pinia": "^2.0.16",
 		"pizzly-js": "^0.2.8",
 		"quasar": "^2.6.0",

@@ -1,134 +1,130 @@
 <script setup>
-import { useInfoStore } from 'src/stores/userinfo'
+import { useInfoStore } from 'src/stores/userinfo-nango'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { ref, watch } from 'vue'
+
+// import Nango from '@nangohq/frontend'
+// const nango = new Nango({ publicKey: '8e8f192b-f1a6-4a3b-b74b-cd8bd2e114c9' })
 
 let drawerLeft = ref(true)
 
 const infoStore = useInfoStore()
 const { userId, userData, groups, currentGroup } = storeToRefs(infoStore)
 
+const router = useRouter()
+
 if (userData.value && !groups.value) {
-	infoStore.getGroups()
+   infoStore.getGroups()
 }
 
 async function login() {
-	await infoStore.connect().then(() => {
-		// router.push('/group')
-	})
+   await infoStore.connect().then(() => {
+      // router.push('/group')
+   })
 }
 
 function setCurrentGroup(i) {
-	infoStore.setCurrentGroup(i)
+   infoStore.setCurrentGroup(i)
+   router.push('/recent-expenses')
 }
 </script>
 
 <template>
-	<q-layout view="hHh lpR fFf">
-		<q-page-container>
-			<q-header elevated class="bg-primary">
-				<q-toolbar>
-					<q-btn flat @click="drawerLeft = !drawerLeft" icon="menu" />
-					<q-btn flat to="/"> Splitwise </q-btn>
-					<q-space />
+   <q-layout view="hHh lpR fFf">
+      <q-page-container>
+         <q-header elevated class="bg-primary">
+            <q-toolbar>
+               <q-btn flat @click="drawerLeft = !drawerLeft" icon="menu" />
+               <q-btn flat to="/"> Splitwise </q-btn>
+               <q-space />
 
-					<div v-if="userData && userId">
-						<q-avatar size="md" class="q-mr-sm">
-							<img :src="userData.picture?.small" />
-						</q-avatar>
-						<span class="q-subtitle-1 q-mr-sm">
-							{{ userData.first_name }} {{ userData.last_name }}
-						</span>
-						<q-btn outline class="q-ml-sm">Log Out</q-btn>
-					</div>
-					<div v-else>
-						<q-btn outline label="Log In" @click="login" />
-					</div>
-				</q-toolbar>
-			</q-header>
-			<q-drawer
-				side="left"
-				:breakpoint="768"
-				bordered
-				persistent
-				v-model="drawerLeft"
-				class="bg-grey-3">
-				<q-list>
-					<q-item
-						v-if="currentGroup"
-						style="margin-top: 20px; margin-bottom: 10px">
-						<q-item-section>
-							<q-item-label overline>Current Group</q-item-label>
-							<q-item-label>{{ currentGroup.name }}</q-item-label>
-						</q-item-section>
-						<q-item-section avatar>
-							<q-avatar>
-								<img :src="currentGroup.avatar?.small" />
-							</q-avatar>
-						</q-item-section>
-					</q-item>
+               <div v-if="userData">
+                  <q-avatar size="md" class="q-mr-sm">
+                     <img :src="userData.picture?.small" />
+                  </q-avatar>
+                  <span class="q-subtitle-1 q-mr-sm">
+                     {{ userData.first_name }} {{ userData.last_name }}
+                  </span>
+                  <q-btn outline class="q-ml-sm">Log Out</q-btn>
+               </div>
+               <div v-else>
+                  <q-btn outline label="Log In" @click="login" />
+               </div>
+            </q-toolbar>
+         </q-header>
+         <q-drawer
+            side="left"
+            :breakpoint="768"
+            bordered
+            persistent
+            v-model="drawerLeft"
+            class="bg-grey-3">
+            <q-list>
+               <q-item v-if="currentGroup" style="margin-top: 20px; margin-bottom: 10px">
+                  <q-item-section>
+                     <q-item-label overline>Current Group</q-item-label>
+                     <q-item-label>{{ currentGroup.name }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section avatar>
+                     <q-avatar>
+                        <img :src="currentGroup.avatar?.small" />
+                     </q-avatar>
+                  </q-item-section>
+               </q-item>
 
-					<q-separator inset />
+               <q-separator inset />
 
-					<q-item
-						clickable
-						to="/recent-expenses"
-						:disable="currentGroup ? null : true">
-						<q-item-section avatar>
-							<q-icon name="timeline" color="green" />
-						</q-item-section>
-						<q-item-section>Recent Group Expenses</q-item-section>
-					</q-item>
+               <q-item clickable to="/recent-expenses" :disable="currentGroup ? null : true">
+                  <q-item-section avatar>
+                     <q-icon name="timeline" color="green" />
+                  </q-item-section>
+                  <q-item-section>Recent Group Expenses</q-item-section>
+               </q-item>
 
-					<q-item
-						clickable
-						to="/user-expenses"
-						:disable="currentGroup ? null : true">
-						<q-item-section avatar>
-							<q-icon name="timeline" color="green" />
-						</q-item-section>
-						<q-item-section>User Expenses in Group</q-item-section>
-					</q-item>
-					<q-item
-						clickable
-						to="/new-expense"
-						:disable="currentGroup ? null : true">
-						<q-item-section avatar>
-							<q-icon name="paid" color="green" />
-						</q-item-section>
-						<q-item-section>New Group Expense</q-item-section>
-					</q-item>
+               <q-item clickable to="/user-expenses" :disable="currentGroup ? null : true">
+                  <q-item-section avatar>
+                     <q-icon name="timeline" color="green" />
+                  </q-item-section>
+                  <q-item-section>User Expenses in Group</q-item-section>
+               </q-item>
+               <q-item clickable to="/new-expense" :disable="currentGroup ? null : true">
+                  <q-item-section avatar>
+                     <q-icon name="paid" color="green" />
+                  </q-item-section>
+                  <q-item-section>New Group Expense</q-item-section>
+               </q-item>
 
-					<q-separator inset />
+               <q-separator inset />
 
-					<q-expansion-item
-						icon="group"
-						expand-icon-class="text-green"
-						label="Groups"
-						:disable="groups ? null : true">
-						<template #header>
-							<q-item-section avatar>
-								<q-icon name="group" color="green" />
-							</q-item-section>
-							<q-item-section>Groups</q-item-section>
-						</template>
-						<q-list dense padding>
-							<q-item
-								clickable
-								v-for="(group, i) in groups"
-								:key="`group-${i}`"
-								@click="() => setCurrentGroup(i)"
-								:active="currentGroup.id === group.id">
-								<q-item-section>{{ group.name }}</q-item-section>
-							</q-item>
-						</q-list>
-					</q-expansion-item>
-				</q-list>
-			</q-drawer>
-			<router-view></router-view>
-		</q-page-container>
-	</q-layout>
+               <q-expansion-item
+                  icon="group"
+                  expand-icon-class="text-green"
+                  label="Groups"
+                  :default-opened="groups ? false : true"
+                  :disable="groups ? null : true">
+                  <template #header>
+                     <q-item-section avatar>
+                        <q-icon name="group" color="green" />
+                     </q-item-section>
+                     <q-item-section>Groups</q-item-section>
+                  </template>
+                  <q-list dense padding>
+                     <q-item
+                        clickable
+                        v-for="(group, i) in groups"
+                        :key="`group-${i}`"
+                        @click="() => setCurrentGroup(i)"
+                        :active="currentGroup.id === group.id">
+                        <q-item-section>{{ group.name }}</q-item-section>
+                     </q-item>
+                  </q-list>
+               </q-expansion-item>
+            </q-list>
+         </q-drawer>
+         <router-view></router-view>
+      </q-page-container>
+   </q-layout>
 </template>
 
 <script>
