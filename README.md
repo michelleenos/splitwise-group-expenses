@@ -17,7 +17,7 @@ My partners and I use [splitwise](https://www.splitwise.com/) to manage our hous
 
 ## API Authentication
 
-Initially this app included auth with PizzlyJS, but since Pizzly became [Nango](https://docs.nango.dev/) I've been unable to make this work. So we are using an API key for now.
+Initially this app included auth with PizzlyJS, but then Pizzly became [Nango](https://docs.nango.dev/) and I've been unable to make Nango play nicely with Quasar. So we are using an API key for now.
 
 Note that the API key provides access to your account. Do not share it!
 
