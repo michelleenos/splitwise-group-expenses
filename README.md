@@ -4,9 +4,22 @@ My partners and I use [splitwise](https://www.splitwise.com/) to manage our hous
 
 #### Vue3 :star: Quasar :star: Vite :star: Vue Router :star: Pinia :star: Axios
 
+## Using the App
+
+-  `git clone https://github.com/crankysparrow/splitwise-group-expenses.git`
+-  `cd splitwise-group-expenses`
+-  Add an API key to `.env` using the steps below
+-  `npm install`
+-  `npm run dev`
+-  The app will open on a localhost port. Click "Login" in the top right corner to fetch your user info. Once you've done this, your groups should show up in the left sidebar. Choose a group and visit the other links in the sidebar to see recent expenses in your group, or to create a new expense.
+
+Note: You must have an active Splitwise account and be a member of at least one group which has had activity in the past 6 months. This won't work for one-off transactions between individuals who are not already in a group with you!
+
 ## API Authentication
 
 Initially this app included auth with PizzlyJS, but since Pizzly became [Nango](https://docs.nango.dev/) I've been unable to make this work. So we are using an API key for now.
+
+Note that the API key provides access to your account. Do not share it!
 
 -  At https://secure.splitwise.com/apps/ click "Register your application"
 -  Create a new app. The app's name, description, and URL can be whatever you like.
@@ -16,10 +29,3 @@ Initially this app included auth with PizzlyJS, but since Pizzly became [Nango](
 ```
 VITE_SPLITWISE_API_KEY=YOURAPIKEY
 ```
-
-## Using the App
-
--  Add an API key first! (see above)
--  `npm install`, then `npm run dev`
--  The app will open on a localhost port
--  Click "Login" in the top right corner to fetch your user info. Once you've done this, any groups you are a part of in splitwise (that you've interacted with in the past 6 months) should show up in the left sidebar. Choose a group and visit the other links in the sidebar to see recent expenses in your group, or to create a new expense.
