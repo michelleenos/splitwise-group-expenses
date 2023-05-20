@@ -1,10 +1,11 @@
 <script setup>
-import { useInfoStore } from 'stores/userinfo-nango'
+import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
-import { watch } from 'vue'
+import { watch, onMounted } from 'vue'
 
 const infoStore = useInfoStore()
-const { userExpenses, groupId } = storeToRefs(infoStore)
+
+const { groupId, userExpenses } = storeToRefs(infoStore)
 
 const columns = [
    {
@@ -42,13 +43,13 @@ const columns = [
    },
 ]
 
-if (groupId.value !== -1) {
-   infoStore.getUserExpenses()
-}
+onMounted(() => {
+   infoStore.setUserExpenses()
+})
 
 watch(groupId, (newVal, oldVal) => {
    console.log('group id updated: ', newVal)
-   infoStore.getUserExpenses()
+   infoStore.setUserExpenses()
 })
 </script>
 

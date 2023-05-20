@@ -1,31 +1,60 @@
 <script setup>
-import { useInfoStore } from 'src/stores/userinfo-nango'
+import { useInfoStore } from 'src/stores/userinfo'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
-import { ref, watch } from 'vue'
-
-// import Nango from '@nangohq/frontend'
-// const nango = new Nango({ publicKey: '8e8f192b-f1a6-4a3b-b74b-cd8bd2e114c9' })
-
-let drawerLeft = ref(true)
+import { ref, watch, onMounted } from 'vue'
 
 const infoStore = useInfoStore()
-const { userId, userData, groups, currentGroup } = storeToRefs(infoStore)
+let drawerLeft = ref(true)
+
+const { userData, groups, currentGroup } = storeToRefs(infoStore)
+
+onMounted(() => {
+   if (userData.value && !groups.value) {
+      getGroups()
+   }
+})
 
 const router = useRouter()
 
-if (userData.value && !groups.value) {
-   infoStore.getGroups()
+async function login() {
+   await fetch('/api/splitwise/user')
+      .then((res) => res.json())
+      .then((data) => {
+         infoStore.userData = data.user
+         getGroups()
+      })
+      .catch((err) => {
+         console.log(error)
+      })
 }
 
-async function login() {
-   await infoStore.connect().then(() => {
-      // router.push('/group')
-   })
+async function getGroups() {
+   await fetch('/api/splitwise/groups')
+      .then((res) => res.json())
+      .then((data) => {
+         // console.log(data)
+         infoStore.setGroups(data)
+      })
 }
 
 function setCurrentGroup(i) {
-   infoStore.setCurrentGroup(i)
+   let currentGroup = groups.value[i]
+   currentGroup.members.forEach((member, i) => {
+      member.currentSplit = 0
+      // if (member.id == 1530173) {
+      //    // michelle
+      //    member.currentSplit = 38
+      // } else if (member.id == 12048317) {
+      //    // jonathan
+      //    member.currentSplit = 31
+      // } else if (member.id == 32806672) {
+      //    // bárbara
+      //    member.currentSplit = 31
+      // }
+   })
+   infoStore.currentGroup = currentGroup
+   infoStore.groupId = currentGroup.id
    router.push('/recent-expenses')
 }
 </script>
@@ -126,134 +155,3 @@ function setCurrentGroup(i) {
       </q-page-container>
    </q-layout>
 </template>
-
-<script>
-// import { defineComponent } from 'vue'
-
-// export default defineComponent({
-// 	name: 'IndexPage',
-// 	data: function () {
-// 		return {
-// 			user: null,
-// 			groups: [],
-// 			userInfo: null,
-// 			currentGroupId: null,
-// 			currentGroupData: {},
-// 			recentGroupExpenses: [],
-// 			members: [],
-// 			slidersKey: 0,
-// 			formError: false,
-// 			inputCost: null,
-// 			inputDate: null,
-// 			inputName: null,
-// 			tab: 'login',
-// 			splitTotal: 0,
-// 			splitwise: splitwise,
-// 		}
-// 	},
-
-// 	methods: {
-// 		isLoggedIn() {
-// 			return this.user && this.userInfo !== null ? true : false
-// 		},
-// 		isGroup() {
-// 			return this.currentGroupId && this.currentGroupData
-// 		},
-// 		connect: function () {
-// 			splitwise.connect().then(this.connectSuccess).catch(this.connectError)
-// 		},
-// 		logoutUser: function () {
-// 			this.user = null
-// 			this.groups = []
-// 			this.userInfo = null
-// 			this.currentGroupData = {}
-// 			this.currentGroupId = null
-// 			this.members = []
-// 			localStorage.removeItem('splitwise_user')
-// 			localStorage.removeItem('splitwise_currentgroupid')
-// 		},
-// 		getCurrentUser: function () {
-// 			if (!this.user) {
-// 				return this.sendError('missing user auth')
-// 			}
-// 			splitwise
-// 				.auth(this.user)
-// 				.get('/get_current_user')
-// 				.then((response) => response.json())
-// 				.then((data) => {
-// 					if (data.error) {
-// 						throw data.error
-// 					} else {
-// 						this.userInfo = data.user
-// 					}
-// 				})
-// 				.catch((err) => {
-// 					console.error(err)
-// 					this.user = null
-// 				})
-// 		},
-// 		sendError: function (msg) {
-// 			console.error(msg)
-// 			return
-// 		},
-// 		getGroups: function () {
-// 			if (!this.user) {
-// 				return this.sendError('missing user auth')
-// 			}
-// 			splitwise
-// 				.auth(this.user)
-// 				.get('/get_groups')
-// 				.then((response) => response.json())
-// 				.then((data) => {
-// 					if (data.error) throw data.error
-// 					this.groups = data.groups
-// 					this.tab = 'groups'
-// 				})
-// 				.catch((err) => {
-// 					console.error(err)
-// 					this.user = null
-// 				})
-// 		},
-// 		getGroup(id) {
-// 			splitwise
-// 				.auth(this.user)
-// 				.get('/get_group/' + id)
-// 				.then((response) => response.json())
-// 				.then((data) => {
-// 					if (data.error) throw data.error
-// 					this.currentGroupId = id
-// 					this.currentGroupData = data.group
-
-// 					this.store.groupId = id
-
-// 					this.currentGroupData.members.forEach((member, i) => {
-// 						this.members[i] = JSON.parse(JSON.stringify(member))
-// 						this.members[i].currentSplit = 0
-// 						if (member.id == 1530173) {
-// 							// michelle
-// 							this.members[i].currentSplit = 30
-// 						} else if (member.id == 12048317) {
-// 							// jonathan
-// 							this.members[i].currentSplit = 37
-// 						} else if (member.id == 32806672) {
-// 							// bárbara
-// 							this.members[i].currentSplit = 33
-// 						} else {
-// 							this.members[i].currentSplit = 0
-// 						}
-// 					})
-
-// 					this.store.groupData = data.group
-
-// 					// localStorage.setItem('splitwise_currentgroupid', this.currentGroupId)
-// 					this.getExpenses()
-// 				})
-// 				.catch(console.error)
-// 		},
-
-// 		connectError: function (err) {
-// 			console.log(err)
-// 		},
-// 	},
-// })
-</script>

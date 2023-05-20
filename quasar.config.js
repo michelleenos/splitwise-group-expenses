@@ -27,7 +27,12 @@ module.exports = configure(function (/* ctx */) {
       // app boot file (/src/boot)
       // --> boot files are part of "main.js"
       // https://v2.quasar.dev/quasar-cli/boot-files
-      boot: [],
+      // boot: [
+      //    {
+      //       path: 'nango',
+      //       server: false,
+      //    },
+      // ],
 
       // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css
       css: ['app.scss'],
@@ -132,7 +137,7 @@ module.exports = configure(function (/* ctx */) {
          // ssrPwaHtmlFilename: 'offline.html', // do NOT use index.html as name!
          // will mess up SSR
 
-         // extendSSRWebserverConf (esbuildConf) {},
+         // extendSSRWebserverConf(esbuildConf) {},
          // extendPackageJson (json) {},
 
          pwa: false,
@@ -144,6 +149,7 @@ module.exports = configure(function (/* ctx */) {
          // (gets superseded if process.env.PORT is specified at runtime)
 
          middlewares: [
+            'api',
             'render', // keep this as last one
          ],
       },

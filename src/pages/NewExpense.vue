@@ -1,5 +1,5 @@
 <script setup>
-import { useInfoStore } from 'stores/userinfo-nango'
+import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
 import { watch, ref } from 'vue'
 import { useQuasar } from 'quasar'
@@ -7,7 +7,7 @@ import { useQuasar } from 'quasar'
 const $q = useQuasar()
 
 const infoStore = useInfoStore()
-const { currentGroup } = storeToRefs(infoStore)
+const { currentGroup, userData } = storeToRefs(infoStore)
 
 const dt = new Date()
 let month = dt.getMonth() + 1
@@ -21,14 +21,55 @@ let even = ref(false)
 let bar = ref()
 let formRes = ref('')
 
+function onReset() {
+   inputName.value = ''
+   inputCost.value = 0
+   even.value = true
+   splitTotal.value = 0
+   inputDate.value = `${dt.getFullYear()}/${month}/${dt.getDate()}`
+}
+
+const roundToCents = (n) => Math.floor(n * 100) / 100
+
+function splitUnevelyQuery() {
+   let shares = {}
+   // 'users__0__paid_share' = inputCost.value.toString()
+   let total = 0
+   for (let i = 0; i < currentGroup.value.members.length; i++) {
+      let cur = currentGroup.value.members[i]
+      let currentShare = roundToCents(inputCost.value * (cur.currentSplit / 100))
+      shares[cur.id] = currentShare
+      total += currentShare
+   }
+
+   let diff = inputCost.value - total
+   if (diff <= 0.03) {
+      shares[userData.value.id] += diff
+   }
+
+   let queryString = '&users__0__paid_share' + '=' + inputCost.value.toString()
+
+   Object.keys(shares).forEach((id, i) => {
+      queryString += `&users__${i}__user_id=${id}&users__${i}__owed_share=${shares[id].toString()}`
+   })
+
+   return queryString
+}
+
 async function submitExpense() {
+   let url = `/api/splitwise/new-expense?cost=${inputCost.value}&description=${inputName.value}&date=${inputDate.value}&even=${even.value}&group_id=${currentGroup.value.id}`
+   if (!even.value) {
+      url += splitUnevelyQuery()
+   }
+
+   console.log(url)
    bar.value.start()
    formRes.value = ''
-   let res = await infoStore
-      .submitExpense(inputCost.value, inputName.value, inputDate.value, even.value)
-      .then((res, error) => {
+   await fetch(url)
+      .then((res) => {
          bar.value.stop()
          formRes.value = 'success!'
+         console.log(res)
          $q.notify(formRes.value)
       })
       .catch((err) => {
@@ -38,8 +79,6 @@ async function submitExpense() {
          bar.value.stop()
       })
 }
-
-function onReset() {}
 
 function updateSplit() {
    if (!currentGroup.value || !currentGroup.value.members) return
@@ -142,50 +181,34 @@ function definedSplit(setting) {
             </q-input>
 
             <div class="splits">
-               <div class="row q-gutter-sm no-wrap">
-                  <div>
-                     <q-input
-                        class="q-mb-sm"
-                        v-for="(member, i) in currentGroup.members"
-                        :key="i"
-                        :readonly="even"
-                        outlined
-                        type="number"
-                        :label="member.first_name"
-                        v-model="member.currentSplit"
-                        @update:model-value="updateSplit" />
-                  </div>
+               <q-toggle v-model="even" color="green" label="split evenly"></q-toggle>
+
+               <div class="row q-gutter-sm" v-if="!even">
+                  <q-input
+                     class="q-mb-sm"
+                     v-for="(member, i) in currentGroup.members"
+                     :key="i"
+                     :disable="even"
+                     outlined
+                     type="number"
+                     :label="member.first_name"
+                     v-model="member.currentSplit"
+                     @update:model-value="updateSplit" />
+                  <div style="width: 100%"></div>
                   <q-input
                      filled
+                     class="self-start"
                      type="number"
                      label="Total"
                      v-model="splitTotal"
                      readonly
                      :rules="[(val) => splitRules(val)]"
                      lazy-rules="ondemand" />
-                  <div>
-                     <div>set predefined split:</div>
-                     <q-btn-group flat class="q-mb-md">
-                        <q-btn
-                           class="q-mr-md"
-                           padding="xs"
-                           flat
-                           color="green-7"
-                           label="groceries"
-                           @click="() => definedSplit('groceries')"></q-btn>
-                        <q-btn
-                           padding="xs"
-                           flat
-                           color="green-8"
-                           label="income"
-                           @click="() => definedSplit('income')"></q-btn>
-                     </q-btn-group>
-                     <q-toggle v-model="even" color="green" label="split evenly"></q-toggle>
-                  </div>
                </div>
             </div>
 
             <q-btn label="Submit" type="submit" color="primary" />
+            <q-btn label="Reset" type="reset" color="primary" flat />
             <div class="res">{{ formRes }}</div>
          </q-form>
          <q-ajax-bar ref="bar" position="bottom" color="accent" skip-hijack />

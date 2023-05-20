@@ -1,7 +1,7 @@
 <script setup>
-import { useInfoStore } from 'stores/userinfo-nango'
+import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
-import { watch } from 'vue'
+import { watch, onMounted } from 'vue'
 
 const infoStore = useInfoStore()
 const { expenses, groupId } = storeToRefs(infoStore)
@@ -38,13 +38,25 @@ const columns = [
    },
 ]
 
-if (groupId.value !== -1) {
-   infoStore.getExpenses()
-}
-
 watch(groupId, (newVal, oldVal) => {
    console.log('group id updated: ', newVal)
-   infoStore.getExpenses()
+   groupId.value = newVal
+   getExpenses()
+})
+
+async function getExpenses() {
+   await fetch(`/api/splitwise/expenses?group_id=${groupId.value}`)
+      .then((res) => res.json())
+      .then((data) => {
+         console.log(data)
+         infoStore.expenses = data.expenses.filter((expense) => expense.deleted_at === null)
+      })
+}
+
+onMounted(() => {
+   if (groupId.value !== -1) {
+      getExpenses()
+   }
 })
 </script>
 
