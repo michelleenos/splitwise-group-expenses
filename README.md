@@ -13,7 +13,7 @@ My partners and I use [splitwise](https://www.splitwise.com/) to manage our hous
 -  `npm run dev`
 -  The app will open on a localhost port. Click "Login" in the top right corner to fetch your user info. Once you've done this, your groups should show up in the left sidebar. Choose a group and visit the other links in the sidebar to see recent expenses in your group, or to create a new expense.
 
-Note: You must have an active Splitwise account and be a member of at least one group which has had activity in the past 6 months. This won't work for one-off transactions between individuals who are not already in a group with you!
+**Note**: You must have an active Splitwise account and be a member of at least one group which has had activity in the past 6 months. This won't work for one-off transactions between individuals who are not already in a group with you.
 
 ## API Authentication
 
