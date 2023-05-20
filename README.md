@@ -14,7 +14,7 @@ Initially this app included auth with PizzlyJS, but since Pizzly became [Nango](
 -  In the root folder of this project, create a `.env` file and add your API key like this:
 
 ```
-VITE_SPLITWISE_API_KEY={{your key}}
+VITE_SPLITWISE_API_KEY=YOURAPIKEY
 ```
 
 ## Using the App
