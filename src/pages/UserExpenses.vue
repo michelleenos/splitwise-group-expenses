@@ -58,7 +58,9 @@ watch(groupId, (newVal, oldVal) => {
       <q-banner class="bg-green-9 text-white" v-if="groupId === -1">
          <span class="text-weight-medium">select a group in the sidebar</span>
       </q-banner>
-      <div class="q-py-xl full-width row wrap justify-center items-start" v-else>
+      <div
+         class="q-py-xl full-width row wrap justify-center items-start"
+         v-else>
          <q-table
             flat
             bordered

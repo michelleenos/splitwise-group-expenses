@@ -9,7 +9,10 @@ const headers = {
 }
 
 export default async function (req, res) {
-   let path = req.url.split('?')[0].substring('/api/splitwise/'.length).split('/')[0]
+   let path = req.url
+      .split('?')[0]
+      .substring('/api/splitwise/'.length)
+      .split('/')[0]
    // let query = req.query
    let apireq = {
       url: '/get_current_user',
@@ -25,8 +28,16 @@ export default async function (req, res) {
          return
       }
       let d = new Date()
-      d.setMonth(d.getMonth() - 5)
-      apireq.url = `/get_expenses?group_id=${req.query.group_id}&updated_after=${d.toISOString()}`
+      d.setMonth(d.getMonth() - 6)
+      apireq.url = `/get_expenses?group_id=${
+         req.query.group_id
+      }&updated_after=${d.toISOString()}`
+
+      Object.keys(req.query).forEach((key) => {
+         if (key !== 'group-id') {
+            apireq.url += `&${key}=${req.query[key]}`
+         }
+      })
    } else if (path === 'new-expense') {
       apireq.method = 'post'
       apireq.url = '/create_expense'
@@ -46,12 +57,14 @@ export default async function (req, res) {
       })
 
       apireq.data = data
+   } else if (path === 'get_categories') {
+      apireq.url = '/get_categories'
    }
 
    api(apireq)
       .then((response) => {
          let data = JSON.stringify(response.data)
-         console.log(data)
+         // console.log(data)
          res.status(200).send(data)
       })
       .catch(function (error) {
