@@ -5,9 +5,14 @@ import { watch, onMounted, ref } from 'vue'
 
 const infoStore = useInfoStore()
 const { expenses, groupId } = storeToRefs(infoStore)
+const loading = ref(false)
 const offset = ref(0)
-const count = ref(50)
 const categoryOpts = ref(null)
+
+const pagination = ref({
+   page: 1,
+   rowsPerPage: 10,
+})
 
 const columns = [
    {
@@ -39,6 +44,7 @@ const columns = [
       field: 'cost',
       sortable: true,
       format: (val) => `$${val}`,
+      sort: (a, b) => parseInt(a, 10) - parseInt(b, 10),
    },
    {
       name: 'createdby',
@@ -50,36 +56,31 @@ const columns = [
 ]
 
 watch(groupId, (newVal, oldVal) => {
-   // console.log('group id updated: ', newVal)
    groupId.value = newVal
-   getExpenses()
+   categoryOpts.value = null
+   expenses.value = []
+   requestExpenses(100)
 })
 
-async function getExpenses() {
-   console.log('doing get expenses')
-   await fetch(
-      `/api/splitwise/expenses?group_id=${groupId.value}&limit=${count.value}`
+async function requestExpenses(count) {
+   loading.value = true
+
+   let data = await fetch(
+      `/api/splitwise/expenses?group_id=${groupId.value}&limit=${count}&offset=${offset.value}`
+   ).then((res) => res.json())
+
+   let returned = data.expenses.length
+   let filtered = data.expenses.filter(
+      (expense) => expense.deleted_at === null && expense.description !== 'Payment'
    )
-      .then((res) => res.json())
-      .then((data) => {
-         console.log(data)
-         infoStore.expenses = data.expenses.filter(
-            (expense) => expense.deleted_at === null
-         )
-      })
+   expenses.value = [...expenses.value, ...filtered]
+   offset.value += returned
+
+   loading.value = false
 }
 
 async function loadMore() {
-   offset.value += count.value
-   await fetch(
-      `/api/splitwise/expenses?group_id=${groupId.value}&limit=${count.value}&offset=${offset.value}`
-   )
-      .then((res) => res.json())
-      .then((data) => {
-         infoStore.expenses = infoStore.expenses.concat(
-            data.expenses.filter((expense) => expense.deleted_at === null)
-         )
-      })
+   await requestExpenses(100)
 }
 
 async function getCategories() {
@@ -101,10 +102,9 @@ async function getCategories() {
 }
 
 onMounted(() => {
-   if (groupId.value !== -1) {
-      getExpenses()
+   if (groupId.value !== -1 && expenses.value.length === 0) {
+      loadMore()
    }
-
    getCategories()
 })
 </script>
@@ -118,13 +118,49 @@ onMounted(() => {
          flat
          bordered
          title="Recent Group Expenses"
+         :loading="loading"
          :rows="expenses"
          :columns="columns"
+         :pagination="pagination"
          color="orange"
          row-key="id"
          class="col-11 col-md-8">
-         <template v-slot:top>
-            <q-btn color="primary" label="Load More" @click="loadMore" />
+         <template v-slot:pagination="scope">
+            <span class="text-small">
+               {{
+                  scope.pagination.rowsPerPage * scope.pagination.page -
+                  scope.pagination.rowsPerPage +
+                  1
+               }}
+               -
+               {{
+                  scope.pagination.rowsPerPage * scope.pagination.page -
+                  scope.pagination.rowsPerPage +
+                  scope.pagination.rowsPerPage
+               }}
+               of
+               {{ expenses.length }}
+            </span>
+            <q-btn
+               flat
+               color="orange"
+               icon="first_page"
+               v-if="scope.pagesNumber > 2"
+               @click="scope.firstPage" />
+            <q-btn
+               flat
+               color="orange"
+               icon="chevron_left"
+               @click="scope.prevPage"
+               :disable="scope.isFirstPage" />
+            <q-btn flat color="orange" icon="chevron_right" @click="scope.nextPage" />
+            <q-btn
+               flat
+               color="orange"
+               icon="last_page"
+               @click="scope.lastPage"
+               :disable="scope.isLastPage" />
+            <q-btn flat color="orange" @click="loadMore" :disable="loading">load more</q-btn>
          </template>
       </q-table>
 

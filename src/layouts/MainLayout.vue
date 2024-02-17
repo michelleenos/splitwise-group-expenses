@@ -33,7 +33,6 @@ async function getGroups() {
    await fetch('/api/splitwise/groups')
       .then((res) => res.json())
       .then((data) => {
-         // console.log(data)
          infoStore.setGroups(data)
       })
 }
