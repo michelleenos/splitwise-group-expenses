@@ -7,12 +7,42 @@ import { ref, watch, onMounted } from 'vue'
 const infoStore = useInfoStore()
 let drawerLeft = ref(true)
 
-const { userData, groups, currentGroup } = storeToRefs(infoStore)
+const { userData, groups, currentGroup, groupId } = storeToRefs(infoStore)
 
-onMounted(() => {
-   if (userData.value && !groups.value) {
-      getGroups()
+onMounted(async () => {
+   if (!userData.value) {
+      let storageData = localStorage.getItem('userData')
+      if (storageData) {
+         infoStore.userData = JSON.parse(storageData)
+      } else {
+         await login()
+      }
    }
+
+   if (userData.value && !groups.value) {
+      let groupsData = localStorage.getItem('groups')
+      if (groupsData) {
+         infoStore.groups = JSON.parse(groupsData)
+      } else {
+         await getGroups()
+      }
+   }
+
+   if (!currentGroup.value) {
+      let group = localStorage.getItem('currentGroup')
+      let id = localStorage.getItem('groupId')
+      if (group && id) {
+         // infoStore.currentGroup = JSON.parse(group)
+         currentGroup.value = JSON.parse(group)
+         groupId.value = id
+      }
+   }
+   // if (!currentGroupId.value) {
+   //    let groupId = localStorage.getItem('groupId')
+   //    if (groupId) {
+   //       infoStore.groupId = groupId
+   //    }
+   // }
 })
 
 const router = useRouter()
@@ -21,25 +51,28 @@ async function login() {
    await fetch('/api/splitwise/user')
       .then((res) => res.json())
       .then((data) => {
-         infoStore.userData = data.user
+         userData.value = data.user
+         localStorage.setItem('userData', JSON.stringify(data.user))
          getGroups()
       })
       .catch((err) => {
-         console.log(error)
+         console.log(err)
       })
 }
 
 async function getGroups() {
+   console.log('getting groups')
    await fetch('/api/splitwise/groups')
       .then((res) => res.json())
       .then((data) => {
          infoStore.setGroups(data)
+         localStorage.setItem('groups', JSON.stringify(groups.value))
       })
 }
 
 function setCurrentGroup(i) {
-   let currentGroup = groups.value[i]
-   currentGroup.members.forEach((member, i) => {
+   let group = groups.value[i]
+   group.members.forEach((member, i) => {
       member.currentSplit = 0
       // if (member.id == 1530173) {
       //    // michelle
@@ -52,8 +85,10 @@ function setCurrentGroup(i) {
       //    member.currentSplit = 31
       // }
    })
-   infoStore.currentGroup = currentGroup
-   infoStore.groupId = currentGroup.id
+   infoStore.currentGroup = group
+   infoStore.groupId = group.id
+   localStorage.setItem('currentGroup', JSON.stringify(group))
+   localStorage.setItem('groupId', group.id)
    router.push('/recent-expenses')
 }
 </script>

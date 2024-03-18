@@ -7,12 +7,15 @@ export const useInfoStore = defineStore('info', {
          groupId: -1,
          currentGroup: false,
          expenses: [],
-         groups: null,
+         groups: false,
          userExpenses: [],
       }
    },
 
    actions: {
+      setUser(data) {
+         this.userData = data
+      },
       setUserExpenses() {
          const userId = this.userData.id
 

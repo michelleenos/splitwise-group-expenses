@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { watch, onMounted, ref } from 'vue'
 
 const infoStore = useInfoStore()
-const { expenses, groupId } = storeToRefs(infoStore)
+const { expenses, groupId, currentGroup } = storeToRefs(infoStore)
 const loading = ref(false)
 const offset = ref(0)
 const categoryOpts = ref(null)
@@ -14,6 +14,16 @@ const pagination = ref({
    rowsPerPage: 10,
 })
 
+const filters = ref({
+   hideDeleted: true,
+   hidePayment: true,
+   createdBy: [],
+   dateRange: { from: null, to: null },
+   hideCommented: false,
+})
+
+const filterCreatedByOptions = ref([])
+
 const columns = [
    {
       name: 'category',
@@ -21,6 +31,7 @@ const columns = [
       label: 'Category',
       sortable: true,
       field: 'category',
+      sort: (a, b) => a.name.localeCompare(b.name),
       format: (cat) => cat.name,
    },
    {
@@ -51,16 +62,59 @@ const columns = [
       label: 'Created By',
       field: 'created_by',
       sortable: true,
+      sort: (a, b) => a.first_name.localeCompare(b.first_name),
       format: (val) => val.first_name,
    },
+   {
+      name: 'type',
+      label: 'type',
+      field: 'description',
+      sortable: false,
+      format: (val) => (val === 'Payment' ? 'payment' : ''),
+   },
 ]
+
+const showDialog = ref(false)
+const dialogContent = ref(null)
 
 watch(groupId, (newVal, oldVal) => {
    groupId.value = newVal
    categoryOpts.value = null
    expenses.value = []
+
+   let members = currentGroup.value.members
+
+   filterCreatedByOptions.value = members.map((member) => {
+      return {
+         label: member.first_name,
+         value: member.first_name,
+      }
+   })
+
    requestExpenses(100)
 })
+
+const filterMethod = (rows, terms, cols, getCellValue) => {
+   return rows.filter((row) => {
+      if (terms.hideDeleted && row.deleted_at) return false
+      if (terms.hidePayment && row.payment) return false
+      let createdBy = row.created_by
+      if (terms.createdBy.length > 0 && !terms.createdBy.includes(createdBy.first_name))
+         return false
+
+      let date = new Date(row.date)
+      if (terms.dateRange.from && date <= new Date(terms.dateRange.from)) return false
+      if (terms.dateRange.to && date >= new Date(terms.dateRange.to)) return false
+      if (terms.hideCommented && row.comments_count > 0) return false
+
+      return true
+   })
+}
+
+const rowClick = (row) => {
+   showDialog.value = true
+   dialogContent.value = row
+}
 
 async function requestExpenses(count) {
    loading.value = true
@@ -70,10 +124,10 @@ async function requestExpenses(count) {
    ).then((res) => res.json())
 
    let returned = data.expenses.length
-   let filtered = data.expenses.filter(
-      (expense) => expense.deleted_at === null && expense.description !== 'Payment'
-   )
-   expenses.value = [...expenses.value, ...filtered]
+   // let filtered = data.expenses.filter(
+   //    (expense) => expense.deleted_at === null && expense.description !== 'Payment'
+   // )
+   expenses.value = [...expenses.value, ...data.expenses]
    offset.value += returned
 
    loading.value = false
@@ -113,7 +167,29 @@ onMounted(() => {
    <q-banner class="bg-green-9 text-white" v-if="groupId === -1">
       <span class="text-weight-medium">select a group in the sidebar</span>
    </q-banner>
-   <div class="q-py-xl full-width row wrap justify-center items-start" v-else>
+   <div v-else class="q-py-xl full-width row wrap justify-center items-start q-gutter-md">
+      <div class="col-11 col-md-8 mb-md q-gutter-sm row">
+         <q-toggle v-model="filters.hideDeleted" label="Hide Deleted" color="orange" />
+         <q-toggle v-model="filters.hidePayment" label="Hide Payments" color="orange" />
+         <q-toggle v-model="filters.hideCommented" label="Hide Commented" color="orange" />
+
+         <q-option-group
+            inline
+            :options="filterCreatedByOptions"
+            type="checkbox"
+            v-model="filters.createdBy" />
+      </div>
+      <div class="col-11 col-md-8 mb-md q-gutter-sm row">
+         <q-btn icon="event" color="green-9">
+            <q-popup-edit title="Date Range" v-model="filters.dateRange" v-slot="scope" auto-save>
+               <q-date v-model="scope.value" range />
+            </q-popup-edit>
+            <span v-if="filters.dateRange.from && filters.dateRange.to" class="q-ml-sm"
+               >{{ filters.dateRange.from }} - {{ filters.dateRange.to }}</span
+            >
+         </q-btn>
+      </div>
+
       <q-table
          flat
          bordered
@@ -122,50 +198,28 @@ onMounted(() => {
          :rows="expenses"
          :columns="columns"
          :pagination="pagination"
+         :filter="filters"
+         :filter-method="filterMethod"
          color="orange"
          row-key="id"
          class="col-11 col-md-8">
-         <template v-slot:pagination="scope">
-            <span class="text-small">
-               {{
-                  scope.pagination.rowsPerPage * scope.pagination.page -
-                  scope.pagination.rowsPerPage +
-                  1
-               }}
-               -
-               {{
-                  scope.pagination.rowsPerPage * scope.pagination.page -
-                  scope.pagination.rowsPerPage +
-                  scope.pagination.rowsPerPage
-               }}
-               of
-               {{ expenses.length }}
-            </span>
-            <q-btn
-               flat
-               color="orange"
-               icon="first_page"
-               v-if="scope.pagesNumber > 2"
-               @click="scope.firstPage" />
-            <q-btn
-               flat
-               color="orange"
-               icon="chevron_left"
-               @click="scope.prevPage"
-               :disable="scope.isFirstPage" />
-            <q-btn flat color="orange" icon="chevron_right" @click="scope.nextPage" />
-            <q-btn
-               flat
-               color="orange"
-               icon="last_page"
-               @click="scope.lastPage"
-               :disable="scope.isLastPage" />
-            <q-btn flat color="orange" @click="loadMore" :disable="loading">load more</q-btn>
+         <template v-slot:body="props">
+            <q-tr :props="props" @click="() => rowClick(props.row)">
+               <q-td v-for="col in props.cols" :key="col.name" :props="props">{{ col.value }}</q-td>
+            </q-tr>
          </template>
       </q-table>
-
-      <!-- <pre>
-      {{ categoryOpts }}
-      </pre> -->
+      <div class="col-12 row justify-center">
+         <q-btn flat color="orange" @click="loadMore" :disable="loading">load more</q-btn>
+      </div>
    </div>
+
+   <q-dialog v-model="showDialog">
+      <q-card>
+         <pre>
+               {{ dialogContent }}
+            </pre
+         >
+      </q-card>
+   </q-dialog>
 </template>
