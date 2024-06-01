@@ -9,10 +9,7 @@ const headers = {
 }
 
 export default async function (req, res) {
-   let path = req.url
-      .split('?')[0]
-      .substring('/api/splitwise/'.length)
-      .split('/')[0]
+   let path = req.url.split('?')[0].substring('/api/splitwise/'.length).split('/')[0]
    // let query = req.query
    let apireq = {
       url: '/get_current_user',
@@ -29,9 +26,7 @@ export default async function (req, res) {
       }
       let d = new Date()
       d.setMonth(d.getMonth() - 6)
-      apireq.url = `/get_expenses?group_id=${
-         req.query.group_id
-      }&updated_after=${d.toISOString()}`
+      apireq.url = `/get_expenses?group_id=${req.query.group_id}&updated_after=${d.toISOString()}`
 
       Object.keys(req.query).forEach((key) => {
          if (key !== 'group-id') {
@@ -41,12 +36,14 @@ export default async function (req, res) {
    } else if (path === 'new-expense') {
       apireq.method = 'post'
       apireq.url = '/create_expense'
-      let { cost, description, date, even, group_id } = req.query
+      let { cost, description, date, even, group_id, details, category_id } = req.query
       let data = {
          cost,
+         details,
          description,
          date,
          group_id,
+         category_id,
          split_equally: even,
       }
 
@@ -64,7 +61,6 @@ export default async function (req, res) {
    api(apireq)
       .then((response) => {
          let data = JSON.stringify(response.data)
-         // console.log(data)
          res.status(200).send(data)
       })
       .catch(function (error) {
@@ -84,8 +80,6 @@ export default async function (req, res) {
                request: error.request,
                message: 'The request was made but no response was received',
             })
-            // console.log('The request was made but no response was received')
-            // console.log(error.request)
          } else {
             // Something happened in setting up the request that triggered an Error
             console.log('Error', error.message)

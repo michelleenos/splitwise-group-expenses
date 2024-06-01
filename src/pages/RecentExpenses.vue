@@ -4,7 +4,7 @@ import { storeToRefs } from 'pinia'
 import { watch, onMounted, ref } from 'vue'
 
 const infoStore = useInfoStore()
-const { expenses, groupId, currentGroup } = storeToRefs(infoStore)
+const { expenses, groupId, currentGroup, userData } = storeToRefs(infoStore)
 const loading = ref(false)
 const offset = ref(0)
 const categoryOpts = ref(null)
@@ -72,16 +72,24 @@ const columns = [
       sortable: false,
       format: (val) => (val === 'Payment' ? 'payment' : ''),
    },
+   {
+      name: 'share',
+      label: 'Your Share',
+      field: 'users',
+      sortable: false,
+      format: (users) => {
+         console.log(users)
+         let user = users.find((user) => user.user_id === userData.value.id)
+         console.log(user)
+         return user ? `$${user.owed_share}` : ''
+      },
+   },
 ]
 
 const showDialog = ref(false)
 const dialogContent = ref(null)
 
-watch(groupId, (newVal, oldVal) => {
-   groupId.value = newVal
-   categoryOpts.value = null
-   expenses.value = []
-
+const refreshFilterOpts = () => {
    let members = currentGroup.value.members
 
    filterCreatedByOptions.value = members.map((member) => {
@@ -90,7 +98,13 @@ watch(groupId, (newVal, oldVal) => {
          value: member.first_name,
       }
    })
+}
 
+watch(groupId, (newVal, oldVal) => {
+   // groupId.value = newVal
+   // categoryOpts.value = null
+   expenses.value = []
+   refreshFilterOpts()
    requestExpenses(100)
 })
 
@@ -158,6 +172,9 @@ async function getCategories() {
 onMounted(() => {
    if (groupId.value !== -1 && expenses.value.length === 0) {
       loadMore()
+   }
+   if (currentGroup.value) {
+      refreshFilterOpts()
    }
    getCategories()
 })

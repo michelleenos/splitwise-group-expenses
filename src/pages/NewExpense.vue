@@ -1,7 +1,7 @@
 <script setup>
 import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
-import { watch, ref } from 'vue'
+import { watch, ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
@@ -15,15 +15,19 @@ month = month.toString().padStart(2, '0')
 
 let inputDate = ref(`${dt.getFullYear()}/${month}/${dt.getDate()}`)
 let inputName = ref('')
+let inputNotes = ref('')
 let inputCost = ref()
 let splitTotal = ref(0)
-let even = ref(false)
+let inputCategory = ref()
+let even = ref(true)
 let bar = ref()
 let formRes = ref('')
+const categoryOpts = ref(null)
 
 function onReset() {
    inputName.value = ''
    inputCost.value = 0
+   inputNotes.value = ''
    even.value = true
    splitTotal.value = 0
    inputDate.value = `${dt.getFullYear()}/${month}/${dt.getDate()}`
@@ -57,19 +61,36 @@ function splitUnevelyQuery() {
 }
 
 async function submitExpense() {
-   let url = `/api/splitwise/new-expense?cost=${inputCost.value}&description=${inputName.value}&date=${inputDate.value}&even=${even.value}&group_id=${currentGroup.value.id}`
+   let url = `/api/splitwise/new-expense?`
+   url += `cost=${inputCost.value}`
+   url += `&description=${inputName.value}&date=${inputDate.value}`
+   url += `&even=${even.value}&group_id=${currentGroup.value.id}`
+   url += `&details=${encodeURIComponent(inputNotes.value)}`
+   if (inputCategory.value) {
+      url += `&category_id=${inputCategory.value.value}`
+   }
    if (!even.value) {
       url += splitUnevelyQuery()
    }
 
-   console.log(url)
    bar.value.start()
    formRes.value = ''
    await fetch(url)
-      .then((res) => {
+      .then((res) => res.json())
+      .then((data) => {
          bar.value.stop()
-         formRes.value = 'success!'
-         console.log(res)
+         let share = ''
+         let user = data.expenses[0].users.find((user) => {
+            return user.user_id === userData.value.id
+         })
+         if (user) {
+            share = user.owed_share
+         }
+         formRes.value = `success!`
+         if (share) {
+            formRes.value += ` your share is: ${share}`
+         }
+         console.log(data)
          $q.notify(formRes.value)
       })
       .catch((err) => {
@@ -77,6 +98,25 @@ async function submitExpense() {
          $q.notify(formRes.value)
          console.log(err)
          bar.value.stop()
+      })
+}
+
+async function getCategories() {
+   await fetch(`api/splitwise/get_categories`)
+      .then((res) => res.json())
+      .then((data) => {
+         let reduced = data.categories.reduce((acc, cur) => {
+            let subcats = cur.subcategories.map((subcat) => {
+               return {
+                  id: subcat.id,
+                  value: subcat.id,
+                  label: subcat.name,
+               }
+            })
+            return [...acc, ...subcats]
+         }, [])
+
+         categoryOpts.value = reduced
       })
 }
 
@@ -98,30 +138,9 @@ function splitRules(val) {
    }
 }
 
-function definedSplit(setting) {
-   currentGroup.value.members.forEach((member, i) => {
-      if (setting === 'groceries') {
-         if (member.id == 1530173) {
-            // michelle
-            member.currentSplit = 30
-         } else if (member.id == 12048317) {
-            // jonathan
-            member.currentSplit = 37
-         } else if (member.id == 32806672) {
-            // bárbara
-            member.currentSplit = 33
-         }
-      } else if (setting === 'income') {
-         if (member.id == 1530173) {
-            member.currentSplit = 38
-         } else if (member.id == 12048317) {
-            member.currentSplit = 31
-         } else if (member.id == 32806672) {
-            member.currentSplit = 31
-         }
-      }
-   })
-}
+onMounted(() => {
+   getCategories()
+})
 </script>
 
 <template>
@@ -144,6 +163,7 @@ function definedSplit(setting) {
                :rules="[(v) => !!v || 'This field is required']"
                lazy-rules="ondemand"
                hide-bottom-space />
+            <q-input v-model="inputNotes" label="Notes (optional)" outlined hide-bottom-space />
             <q-input
                outlined
                v-model="inputDate"
@@ -164,6 +184,7 @@ function definedSplit(setting) {
                   </q-icon>
                </template>
             </q-input>
+            <q-select label="Category" :options="categoryOpts" v-model="inputCategory" />
             <q-input
                label="Cost"
                v-model="inputCost"
