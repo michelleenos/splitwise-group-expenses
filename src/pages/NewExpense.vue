@@ -106,11 +106,12 @@ async function getCategories() {
       .then((res) => res.json())
       .then((data) => {
          let reduced = data.categories.reduce((acc, cur) => {
+            let topLevel = cur.name
             let subcats = cur.subcategories.map((subcat) => {
                return {
                   id: subcat.id,
                   value: subcat.id,
-                  label: subcat.name,
+                  label: `${topLevel} - ${subcat.name}`,
                }
             })
             return [...acc, ...subcats]
