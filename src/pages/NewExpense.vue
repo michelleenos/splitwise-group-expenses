@@ -3,6 +3,7 @@ import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
 import { watch, ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { parseCategories, splitUnevenlyQuery } from 'src/utils/new-expense-utils'
 
 const $q = useQuasar()
 
@@ -33,33 +34,6 @@ function onReset() {
    inputDate.value = `${dt.getFullYear()}/${month}/${dt.getDate()}`
 }
 
-const roundToCents = (n) => Math.floor(n * 100) / 100
-
-function splitUnevelyQuery() {
-   let shares = {}
-   // 'users__0__paid_share' = inputCost.value.toString()
-   let total = 0
-   for (let i = 0; i < currentGroup.value.members.length; i++) {
-      let cur = currentGroup.value.members[i]
-      let currentShare = roundToCents(inputCost.value * (cur.currentSplit / 100))
-      shares[cur.id] = currentShare
-      total += currentShare
-   }
-
-   let diff = inputCost.value - total
-   if (diff <= 0.03) {
-      shares[userData.value.id] += diff
-   }
-
-   let queryString = '&users__0__paid_share' + '=' + inputCost.value.toString()
-
-   Object.keys(shares).forEach((id, i) => {
-      queryString += `&users__${i}__user_id=${id}&users__${i}__owed_share=${shares[id].toString()}`
-   })
-
-   return queryString
-}
-
 async function submitExpense() {
    let url = `/api/splitwise/new-expense?`
    url += `cost=${inputCost.value}`
@@ -70,7 +44,7 @@ async function submitExpense() {
       url += `&category_id=${inputCategory.value.value}`
    }
    if (!even.value) {
-      url += splitUnevelyQuery()
+      url += splitUnevenlyQuery(currentGroup.value.members, inputCost.value, userData.value.id)
    }
 
    bar.value.start()
@@ -105,19 +79,8 @@ async function getCategories() {
    await fetch(`api/splitwise/get_categories`)
       .then((res) => res.json())
       .then((data) => {
-         let reduced = data.categories.reduce((acc, cur) => {
-            let topLevel = cur.name
-            let subcats = cur.subcategories.map((subcat) => {
-               return {
-                  id: subcat.id,
-                  value: subcat.id,
-                  label: `${topLevel} - ${subcat.name}`,
-               }
-            })
-            return [...acc, ...subcats]
-         }, [])
-
-         categoryOpts.value = reduced
+         let parsed = parseCategories(data)
+         categoryOpts.value = parsed
       })
 }
 
@@ -129,6 +92,54 @@ function updateSplit() {
    })
 
    splitTotal.value = total
+}
+
+function definedSplit() {
+   even.value = false
+
+   currentGroup.value?.members.forEach((member) => {
+      if (member.id == 1530173) {
+         // michelle
+         member.currentSplit = 37
+      } else if (member.id == 12048317) {
+         // jonathan
+         member.currentSplit = 32
+      } else if (member.id == 32806672) {
+         // bárbara
+         member.currentSplit = 31
+      }
+   })
+   updateSplit()
+}
+
+function onUpdateTitle() {
+   let title = inputName.value.toLowerCase()
+   // console.log(categoryOpts.value)
+   let found
+   if (title.includes('pgw')) {
+      found = searchCategories(categoryOpts.value, 'gas')
+   } else if (title.includes('peco')) {
+      found = searchCategories(categoryOpts.value, 'electric')
+   } else if (title.includes('water')) {
+      found = searchCategories(categoryOpts.value, 'water')
+   } else if (title.includes('instacart')) {
+      found = searchCategories(categoryOpts.value, 'groceries')
+   } else if (title.includes('azul') || title.includes('cat') || title.includes('dog')) {
+      found = searchCategories(categoryOpts.value, 'pets')
+   } else if (title.includes('fios')) {
+      found = searchCategories(categoryOpts.value, 'internet')
+   }
+
+   if (found) inputCategory.value = found
+}
+
+const searchCategories = (options, string) => {
+   const lowercased = string.toLowerCase()
+   let found = options.find((category) => {
+      let catLabel = category.label.toLowerCase()
+      return catLabel.includes(lowercased)
+   })
+   return found
 }
 
 updateSplit()
@@ -163,6 +174,7 @@ onMounted(() => {
                required
                :rules="[(v) => !!v || 'This field is required']"
                lazy-rules="ondemand"
+               @update:model-value="onUpdateTitle"
                hide-bottom-space />
             <q-input v-model="inputNotes" label="Notes (optional)" outlined hide-bottom-space />
             <q-input
@@ -203,7 +215,11 @@ onMounted(() => {
             </q-input>
 
             <div class="splits">
-               <q-toggle v-model="even" color="green" label="split evenly"></q-toggle>
+               <div class="row q-gutter-sm q-mb-sm">
+                  <q-toggle v-model="even" color="green" label="split evenly"></q-toggle>
+
+                  <q-btn label="Proportional Split" @click="definedSplit" outline color="green-8" />
+               </div>
 
                <div class="row q-gutter-sm" v-if="!even">
                   <q-input
