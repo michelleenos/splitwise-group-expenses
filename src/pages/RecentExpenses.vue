@@ -8,6 +8,7 @@ const { expenses, groupId, currentGroup, userData } = storeToRefs(infoStore)
 const loading = ref(false)
 const offset = ref(0)
 const categoryOpts = ref(null)
+const visibleColumns = ref(['description', 'date', 'cost', 'createdby', 'share'])
 
 const pagination = ref({
    page: 1,
@@ -15,11 +16,14 @@ const pagination = ref({
 })
 
 const filters = ref({
+   showDeleted: false,
+   showPayments: false,
    hideDeleted: true,
    hidePayment: true,
    createdBy: [],
    dateRange: { from: null, to: null },
    hideCommented: false,
+   commented: 'all',
 })
 
 const filterCreatedByOptions = ref([])
@@ -78,9 +82,7 @@ const columns = [
       field: 'users',
       sortable: false,
       format: (users) => {
-         console.log(users)
          let user = users.find((user) => user.user_id === userData.value.id)
-         console.log(user)
          return user ? `$${user.owed_share}` : ''
       },
    },
@@ -111,6 +113,8 @@ watch(groupId, (newVal, oldVal) => {
 const filterMethod = (rows, terms, cols, getCellValue) => {
    return rows.filter((row) => {
       if (terms.hideDeleted && row.deleted_at) return false
+      if (!terms.showDeleted && row.deleted_at) return false
+      if (!terms.showPayments && row.payment) return false
       if (terms.hidePayment && row.payment) return false
       let createdBy = row.created_by
       if (terms.createdBy.length > 0 && !terms.createdBy.includes(createdBy.first_name))
@@ -120,6 +124,10 @@ const filterMethod = (rows, terms, cols, getCellValue) => {
       if (terms.dateRange.from && date <= new Date(terms.dateRange.from)) return false
       if (terms.dateRange.to && date >= new Date(terms.dateRange.to)) return false
       if (terms.hideCommented && row.comments_count > 0) return false
+      if (terms.commented !== 'all') {
+         if (terms.commented === 'yes' && row.comments_count === 0) return false
+         if (terms.commented === 'no' && row.comments_count > 0) return false
+      }
 
       return true
    })
@@ -138,10 +146,21 @@ async function requestExpenses(count) {
    ).then((res) => res.json())
 
    let returned = data.expenses.length
+   let adjustedNewExpenses = data.expenses.map((expense) => {
+      // let category = categoryOpts.value.find((cat) => cat.id === expense.category.id)
+      let category = expense.category
+      if (!category || !category.id) {
+         return expense
+      }
+      let foundCategory = categoryOpts.value.find((cat) => cat.id === category.id)
+      expense.category = { ...expense.category, icon: foundCategory.icon }
+      return expense
+      // return { ...expense, category }
+   })
    // let filtered = data.expenses.filter(
    //    (expense) => expense.deleted_at === null && expense.description !== 'Payment'
    // )
-   expenses.value = [...expenses.value, ...data.expenses]
+   expenses.value = [...expenses.value, ...adjustedNewExpenses]
    offset.value += returned
 
    loading.value = false
@@ -160,6 +179,7 @@ async function getCategories() {
                return {
                   id: subcat.id,
                   name: subcat.name,
+                  icon: subcat.icon,
                }
             })
             return [...acc, ...subcats]
@@ -185,26 +205,47 @@ onMounted(() => {
       <span class="text-weight-medium">select a group in the sidebar</span>
    </q-banner>
    <div v-else class="q-py-xl full-width row wrap justify-center items-start q-gutter-md">
-      <div class="col-11 col-md-8 mb-md q-gutter-sm row">
-         <q-toggle v-model="filters.hideDeleted" label="Hide Deleted" color="orange" />
-         <q-toggle v-model="filters.hidePayment" label="Hide Payments" color="orange" />
-         <q-toggle v-model="filters.hideCommented" label="Hide Commented" color="orange" />
+      <div class="col-11 mb-md q-gutter-sm bg-grey-2 row items-center justify-between">
+         <div class="row items-center q-gutter-md wrap">
+            <q-toggle size="sm" v-model="filters.showDeleted" label="Deleted" color="orange" />
 
-         <q-option-group
-            inline
-            :options="filterCreatedByOptions"
-            type="checkbox"
-            v-model="filters.createdBy" />
-      </div>
-      <div class="col-11 col-md-8 mb-md q-gutter-sm row">
-         <q-btn icon="event" color="green-9">
-            <q-popup-edit title="Date Range" v-model="filters.dateRange" v-slot="scope" auto-save>
-               <q-date v-model="scope.value" range />
-            </q-popup-edit>
-            <span v-if="filters.dateRange.from && filters.dateRange.to" class="q-ml-sm"
-               >{{ filters.dateRange.from }} - {{ filters.dateRange.to }}</span
-            >
-         </q-btn>
+            <q-toggle size="sm" v-model="filters.showPayments" label="Payments" color="orange" />
+
+            <q-btn-toggle
+               class="q-ml-lg"
+               size="sm"
+               v-model="filters.commented"
+               :options="[
+                  { label: 'With Comments', value: 'yes' },
+                  { label: 'Without Comments', value: 'no' },
+                  { label: 'All', value: 'all' },
+               ]" />
+
+            <q-btn icon="event" color="green-8" size="sm">
+               <q-popup-edit
+                  title="Date Range"
+                  v-model="filters.dateRange"
+                  v-slot="scope"
+                  auto-save>
+                  <q-date v-model="scope.value" range />
+               </q-popup-edit>
+               <span v-if="filters.dateRange.from && filters.dateRange.to" class="q-ml-sm">
+                  {{ filters.dateRange.from }} - {{ filters.dateRange.to }}
+               </span>
+            </q-btn>
+
+            <div class="row items-center">
+               <div class="text-bold q-mr-sm">Created By:</div>
+               <q-option-group
+                  inline
+                  dense
+                  v-model="filters.createdBy"
+                  :options="filterCreatedByOptions"
+                  type="checkbox" />
+            </div>
+         </div>
+
+         <div class="q-pa-sm"></div>
       </div>
 
       <q-table
@@ -217,11 +258,21 @@ onMounted(() => {
          :pagination="pagination"
          :filter="filters"
          :filter-method="filterMethod"
+         :visible-columns="visibleColumns"
          color="orange"
          row-key="id"
-         class="col-11 col-md-8">
+         class="col-11">
+         <template v-slot:top>
+            <div>
+               <q-toggle v-model="visibleColumns" val="category" label="Category" size="xs" />
+               <q-toggle v-model="visibleColumns" val="date" label="Date" size="xs" />
+               <q-toggle v-model="visibleColumns" val="cost" label="Cost" size="xs" />
+               <q-toggle v-model="visibleColumns" val="createdby" label="Created By" size="xs" />
+               <q-toggle v-model="visibleColumns" val="share" label="Your Share" size="xs" />
+            </div>
+         </template>
          <template v-slot:body="props">
-            <q-tr :props="props" @click="() => rowClick(props.row)">
+            <q-tr :props="props" @click="rowClick(props.row)">
                <q-td v-for="col in props.cols" :key="col.name" :props="props">{{ col.value }}</q-td>
             </q-tr>
          </template>
