@@ -1,7 +1,7 @@
 <script setup>
 import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
-import { watch, onMounted, ref } from 'vue'
+import { watch, onMounted, ref, computed } from 'vue'
 
 const infoStore = useInfoStore()
 const { expenses, groupId, currentGroup, userData } = storeToRefs(infoStore)
@@ -9,6 +9,15 @@ const loading = ref(false)
 const offset = ref(0)
 const categoryOpts = ref(null)
 const visibleColumns = ref(['description', 'date', 'cost', 'createdby', 'share'])
+
+const columnOptions = ref([
+   { value: 'description', label: 'Description' },
+   { value: 'date', label: 'Date' },
+   { value: 'cost', label: 'Cost' },
+   { value: 'createdby', label: 'Created By' },
+   { value: 'share', label: 'Your Share' },
+   { value: 'category', label: 'Category' },
+])
 
 const pagination = ref({
    page: 1,
@@ -22,6 +31,8 @@ const filters = ref({
    hidePayment: true,
    createdBy: [],
    dateRange: { from: null, to: null },
+   // dateRange: null,
+   dateRangeString: '',
    hideCommented: false,
    commented: 'all',
 })
@@ -120,9 +131,13 @@ const filterMethod = (rows, terms, cols, getCellValue) => {
       if (terms.createdBy.length > 0 && !terms.createdBy.includes(createdBy.first_name))
          return false
 
-      let date = new Date(row.date)
-      if (terms.dateRange.from && date <= new Date(terms.dateRange.from)) return false
-      if (terms.dateRange.to && date >= new Date(terms.dateRange.to)) return false
+      if (terms.dateRange) {
+         let date = new Date(row.date)
+         let { from, to } = terms.dateRange
+         if (from && date <= new Date(from)) return false
+         if (to && date >= new Date(to)) return false
+      }
+
       if (terms.hideCommented && row.comments_count > 0) return false
       if (terms.commented !== 'all') {
          if (terms.commented === 'yes' && row.comments_count === 0) return false
@@ -155,11 +170,8 @@ async function requestExpenses(count) {
       let foundCategory = categoryOpts.value.find((cat) => cat.id === category.id)
       expense.category = { ...expense.category, icon: foundCategory.icon }
       return expense
-      // return { ...expense, category }
    })
-   // let filtered = data.expenses.filter(
-   //    (expense) => expense.deleted_at === null && expense.description !== 'Payment'
-   // )
+
    expenses.value = [...expenses.value, ...adjustedNewExpenses]
    offset.value += returned
 
@@ -205,49 +217,6 @@ onMounted(() => {
       <span class="text-weight-medium">select a group in the sidebar</span>
    </q-banner>
    <div v-else class="q-py-xl full-width row wrap justify-center items-start q-gutter-md">
-      <div class="col-11 mb-md q-gutter-sm bg-grey-2 row items-center justify-between">
-         <div class="row items-center q-gutter-md wrap">
-            <q-toggle size="sm" v-model="filters.showDeleted" label="Deleted" color="orange" />
-
-            <q-toggle size="sm" v-model="filters.showPayments" label="Payments" color="orange" />
-
-            <q-btn-toggle
-               class="q-ml-lg"
-               size="sm"
-               v-model="filters.commented"
-               :options="[
-                  { label: 'With Comments', value: 'yes' },
-                  { label: 'Without Comments', value: 'no' },
-                  { label: 'All', value: 'all' },
-               ]" />
-
-            <q-btn icon="event" color="green-8" size="sm">
-               <q-popup-edit
-                  title="Date Range"
-                  v-model="filters.dateRange"
-                  v-slot="scope"
-                  auto-save>
-                  <q-date v-model="scope.value" range />
-               </q-popup-edit>
-               <span v-if="filters.dateRange.from && filters.dateRange.to" class="q-ml-sm">
-                  {{ filters.dateRange.from }} - {{ filters.dateRange.to }}
-               </span>
-            </q-btn>
-
-            <div class="row items-center">
-               <div class="text-bold q-mr-sm">Created By:</div>
-               <q-option-group
-                  inline
-                  dense
-                  v-model="filters.createdBy"
-                  :options="filterCreatedByOptions"
-                  type="checkbox" />
-            </div>
-         </div>
-
-         <div class="q-pa-sm"></div>
-      </div>
-
       <q-table
          flat
          bordered
@@ -263,13 +232,129 @@ onMounted(() => {
          row-key="id"
          class="col-11">
          <template v-slot:top>
-            <div>
-               <q-toggle v-model="visibleColumns" val="category" label="Category" size="xs" />
-               <q-toggle v-model="visibleColumns" val="date" label="Date" size="xs" />
-               <q-toggle v-model="visibleColumns" val="cost" label="Cost" size="xs" />
-               <q-toggle v-model="visibleColumns" val="createdby" label="Created By" size="xs" />
-               <q-toggle v-model="visibleColumns" val="share" label="Your Share" size="xs" />
-            </div>
+            <q-btn icon="filter_list" label="Filters" class="q-mr-sm">
+               <q-menu>
+                  <q-list>
+                     <q-item tag="label">
+                        <q-item-section>
+                           <q-item-label>Show Deleted Items</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                           <q-toggle size="sm" v-model="filters.showDeleted" />
+                        </q-item-section>
+                     </q-item>
+                     <q-item tag="label">
+                        <q-item-section>
+                           <q-item-label>Show Payments</q-item-label>
+                        </q-item-section>
+                        <q-item-section side>
+                           <q-toggle size="sm" v-model="filters.showPayments" />
+                        </q-item-section>
+                     </q-item>
+
+                     <q-item>
+                        <q-item-section side>
+                           <q-btn icon="event" color="green-8" size="md">
+                              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                                 <q-date v-model="filters.dateRange" range minimal />
+                              </q-popup-proxy>
+                           </q-btn>
+                        </q-item-section>
+                        <q-item-section>
+                           <div class="flex q-gutter-xs">
+                              <q-input
+                                 dense
+                                 v-model="filters.dateRange.from"
+                                 label="From"
+                                 mask="date"
+                                 hide-bottom-space
+                                 :rules="[
+                                    (v) => /^-?[\d]+\/[0-1]\d\/[0-3]\d$/.test(v) || 'Invalid date',
+                                 ]">
+                              </q-input>
+                              <q-input
+                                 dense
+                                 v-model="filters.dateRange.to"
+                                 label="To"
+                                 mask="date"
+                                 hide-bottom-space
+                                 :rules="[
+                                    (v) => /^-?[\d]+\/[0-1]\d\/[0-3]\d$/.test(v) || 'Invalid date',
+                                 ]">
+                              </q-input>
+                           </div>
+                        </q-item-section>
+                     </q-item>
+                     <q-separator spaced />
+                     <q-item-label header>Comments</q-item-label>
+                     <q-item tag="label" dense>
+                        <q-item-section side>
+                           <q-radio size="xs" v-model="filters.commented" val="yes" />
+                        </q-item-section>
+                        <q-item-section>
+                           <q-item-label>With Comments</q-item-label>
+                        </q-item-section>
+                     </q-item>
+                     <q-item tag="label" dense>
+                        <q-item-section side>
+                           <q-radio size="xs" v-model="filters.commented" val="no" />
+                        </q-item-section>
+                        <q-item-section>
+                           <q-item-label>Without Comments</q-item-label>
+                        </q-item-section>
+                     </q-item>
+                     <q-item tag="label" dense>
+                        <q-item-section side>
+                           <q-radio size="xs" v-model="filters.commented" val="all" />
+                        </q-item-section>
+                        <q-item-section>
+                           <q-item-label>All</q-item-label>
+                        </q-item-section>
+                     </q-item>
+
+                     <q-separator spaced />
+                     <q-item-label header>Created By</q-item-label>
+                     <q-item
+                        dense
+                        v-for="(creator, i) in filterCreatedByOptions"
+                        :key="i"
+                        tag="label">
+                        <q-item-section side>
+                           <q-checkbox size="sm" v-model="filters.createdBy" :val="creator.value" />
+                        </q-item-section>
+                        <q-item-section>
+                           <q-item-label>{{ creator.label }}</q-item-label>
+                        </q-item-section>
+                     </q-item>
+                     <!-- <q-item>
+                        <q-item-section>
+                           <q-item-label>Created By</q-item-label>
+                           <q-option-group
+                              inline
+                              dense
+                              v-model="filters.createdBy"
+                              :options="filterCreatedByOptions"
+                              type="checkbox" />
+                        </q-item-section>
+                     </q-item> -->
+                  </q-list>
+               </q-menu>
+            </q-btn>
+
+            <q-btn label="Columns" icon="list">
+               <q-menu>
+                  <q-list>
+                     <q-item v-for="(col, i) in columnOptions" :key="i" tag="label" dense>
+                        <q-item-section side>
+                           <q-toggle size="sm" v-model="visibleColumns" :val="col.value" />
+                        </q-item-section>
+                        <q-item-section>
+                           <q-item-label>{{ col.label }}</q-item-label>
+                        </q-item-section>
+                     </q-item>
+                  </q-list>
+               </q-menu>
+            </q-btn>
          </template>
          <template v-slot:body="props">
             <q-tr :props="props" @click="rowClick(props.row)">

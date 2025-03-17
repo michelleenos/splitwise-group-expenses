@@ -122,12 +122,18 @@ function onUpdateTitle() {
       found = searchCategories(categoryOpts.value, 'electric')
    } else if (title.includes('water')) {
       found = searchCategories(categoryOpts.value, 'water')
-   } else if (title.includes('instacart')) {
+   } else if (title.includes('instacart') || title.includes('groceries')) {
       found = searchCategories(categoryOpts.value, 'groceries')
-   } else if (title.includes('azul') || title.includes('cat') || title.includes('dog')) {
+   } else if (title.includes('cashew') || title.includes('cat') || title.includes('dog')) {
       found = searchCategories(categoryOpts.value, 'pets')
    } else if (title.includes('fios')) {
       found = searchCategories(categoryOpts.value, 'internet')
+   } else if (
+      title.includes('uber eats') ||
+      title.includes('grubhub') ||
+      title.includes('restaurant')
+   ) {
+      found = searchCategories(categoryOpts.value, 'dining out')
    }
 
    if (found) inputCategory.value = found
