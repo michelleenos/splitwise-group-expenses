@@ -1,11 +1,12 @@
-import { ssrMiddleware } from 'quasar/wrappers'
+// import { ssrMiddleware } from 'quasar/wrappers'
+import { defineSsrMiddleware } from '#q-app/wrappers'
 
 const apiHandlers = {
    splitwise: import('../../src/api/splitwise'),
 }
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli/developing-ssr/ssr-middlewares
-export default ssrMiddleware(async ({ app, resolve }) => {
+export default defineSsrMiddleware(({ app, port, resolve, publicPath, folders, render, serve }) => {
    // something to do with the server "app"
 
    app.all(resolve.urlPath('*'), async (req, res, next) => {
