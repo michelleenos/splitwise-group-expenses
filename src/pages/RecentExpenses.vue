@@ -2,102 +2,15 @@
 import { useInfoStore } from 'stores/userinfo'
 import { storeToRefs } from 'pinia'
 import { watch, onMounted, ref, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import ExpensesTable from 'src/components/ExpensesTable.vue'
 
 const infoStore = useInfoStore()
-const { expenses, groupId, currentGroup, userData } = storeToRefs(infoStore)
+const { expenses, groupId, currentGroup } = storeToRefs(infoStore)
 const loading = ref(false)
-const offset = ref(0)
-const categoryOpts = ref(null)
-const visibleColumns = ref(['description', 'date', 'cost', 'createdby', 'share'])
-
-const columnOptions = ref([
-   { value: 'description', label: 'Description' },
-   { value: 'date', label: 'Date' },
-   { value: 'cost', label: 'Cost' },
-   { value: 'createdby', label: 'Created By' },
-   { value: 'share', label: 'Your Share' },
-   { value: 'category', label: 'Category' },
-])
-
-const pagination = ref({
-   page: 1,
-   rowsPerPage: 10,
-})
-
-const filters = ref({
-   showDeleted: false,
-   showPayments: false,
-   hideDeleted: true,
-   hidePayment: true,
-   createdBy: [],
-   dateRange: { from: null, to: null },
-   // dateRange: null,
-   dateRangeString: '',
-   hideCommented: false,
-   commented: 'all',
-})
+const route = useRoute()
 
 const filterCreatedByOptions = ref([])
-
-const columns = [
-   {
-      name: 'category',
-      required: false,
-      label: 'Category',
-      sortable: true,
-      field: 'category',
-      sort: (a, b) => a.name.localeCompare(b.name),
-      format: (cat) => cat.name,
-   },
-   {
-      name: 'description',
-      required: true,
-      label: 'Name',
-      align: 'left',
-      field: 'description',
-      sortable: false,
-   },
-   {
-      name: 'date',
-      label: 'Date',
-      field: 'date',
-      sortable: true,
-      format: (val) => new Date(val).toLocaleDateString('en-US'),
-   },
-   {
-      name: 'cost',
-      label: 'Cost',
-      field: 'cost',
-      sortable: true,
-      format: (val) => `$${val}`,
-      sort: (a, b) => parseInt(a, 10) - parseInt(b, 10),
-   },
-   {
-      name: 'createdby',
-      label: 'Created By',
-      field: 'created_by',
-      sortable: true,
-      sort: (a, b) => a.first_name.localeCompare(b.first_name),
-      format: (val) => val.first_name,
-   },
-   {
-      name: 'type',
-      label: 'type',
-      field: 'description',
-      sortable: false,
-      format: (val) => (val === 'Payment' ? 'payment' : ''),
-   },
-   {
-      name: 'share',
-      label: 'Your Share',
-      field: 'users',
-      sortable: false,
-      format: (users) => {
-         let user = users.find((user) => user.user_id === userData.value.id)
-         return user ? `$${user.owed_share}` : ''
-      },
-   },
-]
 
 const showDialog = ref(false)
 const dialogContent = ref(null)
@@ -114,91 +27,20 @@ const refreshFilterOpts = () => {
 }
 
 watch(groupId, (newVal, oldVal) => {
-   // groupId.value = newVal
-   // categoryOpts.value = null
    expenses.value = []
    refreshFilterOpts()
-   requestExpenses(100)
+   requestExpenses(500)
 })
-
-const filterMethod = (rows, terms, cols, getCellValue) => {
-   return rows.filter((row) => {
-      if (terms.hideDeleted && row.deleted_at) return false
-      if (!terms.showDeleted && row.deleted_at) return false
-      if (!terms.showPayments && row.payment) return false
-      if (terms.hidePayment && row.payment) return false
-      let createdBy = row.created_by
-      if (terms.createdBy.length > 0 && !terms.createdBy.includes(createdBy.first_name))
-         return false
-
-      if (terms.dateRange) {
-         let date = new Date(row.date)
-         let { from, to } = terms.dateRange
-         if (from && date <= new Date(from)) return false
-         if (to && date >= new Date(to)) return false
-      }
-
-      if (terms.hideCommented && row.comments_count > 0) return false
-      if (terms.commented !== 'all') {
-         if (terms.commented === 'yes' && row.comments_count === 0) return false
-         if (terms.commented === 'no' && row.comments_count > 0) return false
-      }
-
-      return true
-   })
-}
-
-const rowClick = (row) => {
-   showDialog.value = true
-   dialogContent.value = row
-}
 
 async function requestExpenses(count) {
    loading.value = true
 
-   let data = await fetch(
-      `/api/splitwise/expenses?group_id=${groupId.value}&limit=${count}&offset=${offset.value}`
-   ).then((res) => res.json())
-
-   let returned = data.expenses.length
-   let adjustedNewExpenses = data.expenses.map((expense) => {
-      // let category = categoryOpts.value.find((cat) => cat.id === expense.category.id)
-      let category = expense.category
-      if (!category || !category.id) {
-         return expense
-      }
-      let foundCategory = categoryOpts.value.find((cat) => cat.id === category.id)
-      expense.category = { ...expense.category, icon: foundCategory.icon }
-      return expense
-   })
-
-   expenses.value = [...expenses.value, ...adjustedNewExpenses]
-   offset.value += returned
-
+   await infoStore.loadExpenses(count)
    loading.value = false
 }
 
 async function loadMore() {
-   await requestExpenses(100)
-}
-
-async function getCategories() {
-   await fetch(`api/splitwise/get_categories`)
-      .then((res) => res.json())
-      .then((data) => {
-         let reduced = data.categories.reduce((acc, cur) => {
-            let subcats = cur.subcategories.map((subcat) => {
-               return {
-                  id: subcat.id,
-                  name: subcat.name,
-                  icon: subcat.icon,
-               }
-            })
-            return [...acc, ...subcats]
-         }, [])
-
-         categoryOpts.value = reduced
-      })
+   await requestExpenses(500)
 }
 
 onMounted(() => {
@@ -208,7 +50,6 @@ onMounted(() => {
    if (currentGroup.value) {
       refreshFilterOpts()
    }
-   getCategories()
 })
 </script>
 
@@ -217,7 +58,8 @@ onMounted(() => {
       <span class="text-weight-medium">select a group in the sidebar</span>
    </q-banner>
    <div v-else class="q-py-xl full-width row wrap justify-center items-start q-gutter-md">
-      <q-table
+      <ExpensesTable :rowClickRoute="'/recent-expenses/expense'" :loading="loading" />
+      <!-- <q-table
          flat
          bordered
          title="Recent Group Expenses"
@@ -228,7 +70,7 @@ onMounted(() => {
          :filter="filters"
          :filter-method="filterMethod"
          :visible-columns="visibleColumns"
-         color="orange"
+         color="primary"
          row-key="id"
          class="col-11">
          <template v-slot:top>
@@ -326,17 +168,6 @@ onMounted(() => {
                            <q-item-label>{{ creator.label }}</q-item-label>
                         </q-item-section>
                      </q-item>
-                     <!-- <q-item>
-                        <q-item-section>
-                           <q-item-label>Created By</q-item-label>
-                           <q-option-group
-                              inline
-                              dense
-                              v-model="filters.createdBy"
-                              :options="filterCreatedByOptions"
-                              type="checkbox" />
-                        </q-item-section>
-                     </q-item> -->
                   </q-list>
                </q-menu>
             </q-btn>
@@ -361,18 +192,23 @@ onMounted(() => {
                <q-td v-for="col in props.cols" :key="col.name" :props="props">{{ col.value }}</q-td>
             </q-tr>
          </template>
-      </q-table>
+      </q-table> -->
       <div class="col-12 row justify-center">
-         <q-btn flat color="orange" @click="loadMore" :disable="loading">load more</q-btn>
+         <q-btn flat @click="loadMore" :disable="loading">load more</q-btn>
       </div>
    </div>
 
-   <q-dialog v-model="showDialog">
+   <div v-if="/recent-expenses\/expense\/\d+/gm.test(route.path)">
+      MATCHED
+      <router-view></router-view>
+   </div>
+
+   <!-- <q-dialog v-model="showDialog">
       <q-card>
          <pre>
                {{ dialogContent }}
             </pre
          >
       </q-card>
-   </q-dialog>
+   </q-dialog> -->
 </template>

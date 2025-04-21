@@ -56,6 +56,12 @@ export default async function (req, res) {
       apireq.data = data
    } else if (path === 'get_categories') {
       apireq.url = '/get_categories'
+   } else if (path === 'get_expense') {
+      if (!req.query.expense_id) {
+         res.status(400).send('expense_id required')
+         return
+      }
+      apireq.url = `/get_expense/${req.query.expense_id}`
    }
 
    api(apireq)

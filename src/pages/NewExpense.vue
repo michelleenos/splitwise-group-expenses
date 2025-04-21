@@ -1,9 +1,9 @@
-<script setup>
-import { useInfoStore } from 'stores/userinfo'
+<script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { watch, ref, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { parseCategories, splitUnevenlyQuery } from 'src/utils/new-expense-utils'
+import { useInfoStore } from 'stores/userinfo'
+import { onMounted, ref } from 'vue'
 
 const $q = useQuasar()
 
@@ -11,8 +11,7 @@ const infoStore = useInfoStore()
 const { currentGroup, userData } = storeToRefs(infoStore)
 
 const dt = new Date()
-let month = dt.getMonth() + 1
-month = month.toString().padStart(2, '0')
+let month = (dt.getMonth() + 1).toString().padStart(2, '0')
 
 let inputDate = ref(`${dt.getFullYear()}/${month}/${dt.getDate()}`)
 let inputName = ref('')
@@ -35,6 +34,7 @@ function onReset() {
 }
 
 async function submitExpense() {
+   if (!currentGroup.value || !userData.value) return
    let url = `/api/splitwise/new-expense?`
    url += `cost=${inputCost.value}`
    url += `&description=${inputName.value}&date=${inputDate.value}`
@@ -55,6 +55,7 @@ async function submitExpense() {
          bar.value.stop()
          let share = ''
          let user = data.expenses[0].users.find((user) => {
+            // @ts-ignore
             return user.user_id === userData.value.id
          })
          if (user) {
@@ -88,7 +89,8 @@ function updateSplit() {
    if (!currentGroup.value || !currentGroup.value.members) return
    let total = 0
    currentGroup.value.members.forEach((member, i) => {
-      total += +member.currentSplit ?? 0
+      // total += +member.currentSplit ?? 0
+      total += +member.currentSplit
    })
 
    splitTotal.value = total
@@ -96,17 +98,17 @@ function updateSplit() {
 
 function definedSplit() {
    even.value = false
-
-   currentGroup.value?.members.forEach((member) => {
+   if (!currentGroup.value) return
+   currentGroup.value.members.forEach((member) => {
       if (member.id == 1530173) {
          // michelle
-         member.currentSplit = 37
+         member.currentSplit = 36.5
       } else if (member.id == 12048317) {
          // jonathan
          member.currentSplit = 32
       } else if (member.id == 32806672) {
          // bárbara
-         member.currentSplit = 31
+         member.currentSplit = 31.5
       }
    })
    updateSplit()
@@ -156,9 +158,7 @@ function splitRules(val) {
    }
 }
 
-onMounted(() => {
-   getCategories()
-})
+onMounted(getCategories)
 </script>
 
 <template>
@@ -222,9 +222,13 @@ onMounted(() => {
 
             <div class="splits">
                <div class="row q-gutter-sm q-mb-sm">
-                  <q-toggle v-model="even" color="green" label="split evenly"></q-toggle>
+                  <q-toggle v-model="even" label="split evenly"></q-toggle>
 
-                  <q-btn label="Proportional Split" @click="definedSplit" outline color="green-8" />
+                  <q-btn
+                     label="Proportional Split"
+                     @click="definedSplit"
+                     outline
+                     color="secondary" />
                </div>
 
                <div class="row q-gutter-sm" v-if="!even">

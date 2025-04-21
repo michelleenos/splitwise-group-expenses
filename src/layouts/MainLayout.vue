@@ -1,12 +1,11 @@
-<script setup>
+<script setup lang="ts">
 import { useInfoStore } from 'src/stores/userinfo'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
-import { ref, watch, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const infoStore = useInfoStore()
 let drawerLeft = ref(true)
-
 const { userData, groups, currentGroup, groupId } = storeToRefs(infoStore)
 
 onMounted(async () => {
@@ -19,7 +18,7 @@ onMounted(async () => {
       }
    }
 
-   if (userData.value && !groups.value) {
+   if (userData.value && (!groups.value || groups.value.length === 0)) {
       let groupsData = localStorage.getItem('groups')
       if (groupsData) {
          infoStore.groups = JSON.parse(groupsData)
@@ -34,7 +33,7 @@ onMounted(async () => {
       if (group && id) {
          // infoStore.currentGroup = JSON.parse(group)
          currentGroup.value = JSON.parse(group)
-         groupId.value = id
+         groupId.value = parseInt(id)
       }
    }
    // if (!currentGroupId.value) {
@@ -61,7 +60,6 @@ async function login() {
 }
 
 async function getGroups() {
-   console.log('getting groups')
    await fetch('/api/splitwise/groups')
       .then((res) => res.json())
       .then((data) => {
@@ -74,21 +72,11 @@ function setCurrentGroup(i) {
    let group = groups.value[i]
    group.members.forEach((member, i) => {
       member.currentSplit = 0
-      // if (member.id == 1530173) {
-      //    // michelle
-      //    member.currentSplit = 38
-      // } else if (member.id == 12048317) {
-      //    // jonathan
-      //    member.currentSplit = 31
-      // } else if (member.id == 32806672) {
-      //    // bárbara
-      //    member.currentSplit = 31
-      // }
    })
    infoStore.currentGroup = group
    infoStore.groupId = group.id
    localStorage.setItem('currentGroup', JSON.stringify(group))
-   localStorage.setItem('groupId', group.id)
+   localStorage.setItem('groupId', `${group.id}`)
    router.push('/recent-expenses')
 }
 </script>
@@ -96,7 +84,7 @@ function setCurrentGroup(i) {
 <template>
    <q-layout view="hHh lpR fFf">
       <q-page-container>
-         <q-header elevated class="bg-primary">
+         <q-header>
             <q-toolbar>
                <q-btn flat @click="drawerLeft = !drawerLeft" icon="menu" />
                <q-btn flat to="/"> Splitwise </q-btn>
@@ -122,7 +110,7 @@ function setCurrentGroup(i) {
             bordered
             persistent
             v-model="drawerLeft"
-            class="bg-grey-3">
+            class="bg-grey-1">
             <q-list>
                <q-item v-if="currentGroup" style="margin-top: 20px; margin-bottom: 10px">
                   <q-item-section>
@@ -136,39 +124,51 @@ function setCurrentGroup(i) {
                   </q-item-section>
                </q-item>
 
-               <q-separator inset />
+               <q-separator />
 
-               <q-item clickable to="/recent-expenses" :disable="currentGroup ? null : true">
+               <q-item
+                  clickable
+                  to="/recent-expenses"
+                  :disable="currentGroup ? null : true"
+                  active-class="text-secondary">
                   <q-item-section avatar>
-                     <q-icon name="timeline" color="green" />
+                     <q-icon name="timeline" />
                   </q-item-section>
                   <q-item-section>Recent Group Expenses</q-item-section>
                </q-item>
 
-               <q-item clickable to="/user-expenses" :disable="currentGroup ? null : true">
+               <q-item
+                  clickable
+                  to="/user-expenses"
+                  :disable="currentGroup ? null : true"
+                  active-class="text-secondary">
                   <q-item-section avatar>
-                     <q-icon name="timeline" color="green" />
+                     <q-icon name="timeline" />
                   </q-item-section>
                   <q-item-section>User Expenses in Group</q-item-section>
                </q-item>
-               <q-item clickable to="/new-expense" :disable="currentGroup ? null : true">
+               <q-item
+                  clickable
+                  to="/new-expense"
+                  :disable="currentGroup ? null : true"
+                  active-class="text-secondary">
                   <q-item-section avatar>
-                     <q-icon name="paid" color="green" />
+                     <q-icon name="paid" />
                   </q-item-section>
                   <q-item-section>New Group Expense</q-item-section>
                </q-item>
 
-               <q-separator inset />
+               <q-separator />
 
                <q-expansion-item
                   icon="group"
-                  expand-icon-class="text-green"
                   label="Groups"
                   :default-opened="groups ? false : true"
-                  :disable="groups ? null : true">
+                  :disable="groups ? null : true"
+                  active-class="text-secondary">
                   <template #header>
                      <q-item-section avatar>
-                        <q-icon name="group" color="green" />
+                        <q-icon name="group" />
                      </q-item-section>
                      <q-item-section>Groups</q-item-section>
                   </template>
@@ -178,7 +178,8 @@ function setCurrentGroup(i) {
                         v-for="(group, i) in groups"
                         :key="`group-${i}`"
                         @click="() => setCurrentGroup(i)"
-                        :active="currentGroup.id === group.id">
+                        :active="currentGroup.id === group.id"
+                        active-class="bg-blue-4 text-dark text-weight-bold">
                         <q-item-section>{{ group.name }}</q-item-section>
                      </q-item>
                   </q-list>

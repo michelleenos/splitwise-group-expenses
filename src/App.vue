@@ -12,4 +12,5 @@ export default defineComponent({
 // quasar examples:
 // https://quasar-minimalist-design.netlify.app/
 // https://quasar-prime-admin-template.netlify.app/
+// https://github.com/quasarframework/quasar-awesome?tab=readme-ov-file
 </script>
